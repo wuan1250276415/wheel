@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录 - 爱的转盘</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .filter-section {
+            background: #fff0f6;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #ffb6d9;
+            background: white;
+            color: #ff69b4;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: #ffb6d9;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #ff69b4;
+            color: white;
+            border-color: #ff69b4;
+        }
+
+        .records-container {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .record-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ffebf5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .record-card:hover {
+            border-color: #ffb6d9;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .record-info {
+            flex: 1;
+        }
+
+        .record-player {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff69b4;
+            margin-bottom: 8px;
+        }
+
+        .record-result {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .record-result .emoji {
+            font-size: 1.3em;
+            margin-right: 5px;
+        }
+
+        .record-time {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .record-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .record-badge.reward {
+            background: #90ee90;
+            color: #006400;
+        }
+
+        .record-badge.punishment {
+            background: #dda0dd;
+            color: #4b0082;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 20, 147, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state .emoji {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 1.2em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #ff69b4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📜 历史记录</h1>
+            <p class="subtitle">回顾我们的欢乐时光</p>
+        </header>
+
+        <main>
+            <div class="filter-section">
+                <span style="color: #ff69b4; font-weight: bold;">筛选:</span>
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="老公">🤵 老公</button>
+                <button class="filter-btn" data-filter="老婆">👰 老婆</button>
+                <button class="filter-btn" data-filter="reward">🎁 奖励</button>
+                <button class="filter-btn" data-filter="punishment">😱 惩罚</button>
+            </div>
+
+            <div id="recordsContainer" class="records-container">
+                <div class="loading">加载中...</div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="/" class="back-btn">← 返回转盘</a>
+            </div>
+        </main>
+
+        <footer>
+            <p>用爱制作 ❤️ 只属于我们的回忆</p>
+        </footer>
+    </div>
+
+    <script>
+        let allRecords = [];
+        let currentFilter = 'all';
+
+        // 加载记录
+        async function loadRecords() {
+            try {
+                const response = await fetch('/api/records?limit=100');
+                allRecords = await response.json();
+                renderRecords();
+            } catch (error) {
+                console.error('加载失败:', error);
+                document.getElementById('recordsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">😢</div>
+                        <p>加载失败,请刷新页面重试</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染记录
+        function renderRecords() {
+            const container = document.getElementById('recordsContainer');
+
+            let filteredRecords = allRecords;
+
+            // 应用筛选
+            if (currentFilter !== 'all') {
+                if (currentFilter === 'reward' || currentFilter === 'punishment') {
+                    filteredRecords = allRecords.filter(r => r.result_type === currentFilter);
+                } else {
+                    filteredRecords = allRecords.filter(r => r.player_name === currentFilter);
+                }
+            }
+
+            if (filteredRecords.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">🎯</div>
+                        <p>还没有记录哦,快去转转盘吧!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredRecords.map(record => {
+                const date = new Date(record.created_at);
+                const timeStr = date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="record-card">
+                        <div class="record-info">
+                            <div class="record-player">${record.player_name === '老公' ? '🤵' : '👰'} ${record.player_name}</div>
+                            <div class="record-result">
+                                <span class="emoji">${getEmoji(record.result)}</span>
+                                ${record.result}
+                            </div>
+                            <div class="record-time">${timeStr}</div>
+                        </div>
+                        <div class="record-badge ${record.result_type}">
+                            ${record.result_type === 'reward' ? '🎁 奖励' : '😱 惩罚'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 获取emoji (简化版,实际应该从API获取)
+        function getEmoji(text) {
+            const emojiMap = {
+                '亲亲抱抱': '💕',
+                '按摩15分钟': '💆',
+                '做喜欢的饭': '🍜',
+                '看对方选的电影': '🎬',
+                '免做家务一天': '🎉',
+                '买小礼物': '🎁',
+                '做家务一周': '🧹',
+                '洗碗三天': '🍽️',
+                '唱一首歌': '🎤',
+                '跳一支舞': '💃',
+                '做50个深蹲': '🏃',
+                '讲一个笑话': '😄'
+            };
+            return emojiMap[text] || '✨';
+        }
+
+        // 筛选按钮
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                renderRecords();
+            });
+        });
+
+        // 初始化
+        loadRecords();
+    </script>
+</body>
+</html>
