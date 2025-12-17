@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.WheelSpinRecordMapper">
+  <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelSpinRecord">
+    <!--@mbg.generated-->
+    <!--@Table wheel_api.wheel_spin_record-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="user_id" jdbcType="BIGINT" property="userId" />
+    <result column="content_id" jdbcType="BIGINT" property="contentId" />
+    <result column="result_text" jdbcType="VARCHAR" property="resultText" />
+    <result column="category_id" jdbcType="BIGINT" property="categoryId" />
+    <result column="spin_duration" jdbcType="BIGINT" property="spinDuration" />
+    <result column="spin_time" jdbcType="TIMESTAMP" property="spinTime" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="device_id" jdbcType="VARCHAR" property="deviceId" />
+    <result column="client_type" jdbcType="BOOLEAN" property="clientType" />
+    <result column="is_anomaly" jdbcType="BOOLEAN" property="isAnomaly" />
+    <result column="created_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="created_by" jdbcType="BIGINT" property="createBy" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="updated_by" jdbcType="BIGINT" property="updateBy" />
+    <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, user_id, content_id, result_text, category_id, spin_duration, spin_time, ip_address, 
+    device_id, client_type, is_anomaly, created_time, created_by, update_time, updated_by, 
+    deleted
+  </sql>
+
+
+    <!-- 根据用户ID查询转盘记录 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        ORDER BY spin_time DESC
+    </select>
+
+    <!-- 根据情侣ID查询转盘记录 -->
+    <select id="selectByCoupleId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_spin_record
+        WHERE user_id = #{coupleId,jdbcType=BIGINT}
+        ORDER BY spin_time DESC
+    </select>
+
+    <!-- 查询用户今日转盘次数 -->
+    <select id="countTodaySpins" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND DATE(spin_time) = CURDATE()
+    </select>
+
+    <!-- 查询用户本周转盘次数 -->
+    <select id="countWeekSpins" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND spin_time &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </select>
+
+
+
+    <!-- 统计用户转盘时长 -->
+    <select id="getUserSpinDurationStats" resultType="java.util.Map">
+        SELECT
+        COUNT(*) as total_spins,
+        AVG(spin_duration) as avg_duration,
+        MIN(spin_duration) as min_duration,
+        MAX(spin_duration) as max_duration
+        FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND spin_time &gt;= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+    </select>
+
+  <select id="countTodayByUserId" resultType="int">
+    SELECT COUNT(*) FROM wheel_spin_record
+    WHERE user_id = #{userId,jdbcType=BIGINT}
+    </select>
+
+</mapper>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.WheelCategoryMapper">
+  <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelCategory">
+    <!--@mbg.generated-->
+    <!--@Table wheel_api.wheel_category-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="category_name" jdbcType="VARCHAR" property="categoryName" />
+    <result column="description" jdbcType="LONGVARCHAR" property="description" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="icon_url" jdbcType="VARCHAR" property="iconUrl" />
+    <result column="theme_color" jdbcType="VARCHAR" property="themeColor" />
+    <result column="status" jdbcType="BOOLEAN" property="status" />
+    <result column="is_system" jdbcType="BOOLEAN" property="isSystem" />
+    <result column="created_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="created_by" jdbcType="BIGINT" property="createBy" />
+    <result column="updated_by" jdbcType="BIGINT" property="updateBy" />
+    <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, category_name, description, sort_order, icon_url, theme_color, `status`, is_system, 
+    created_time, update_time, created_by, updated_by, deleted
+  </sql>
+    <!-- 查询启用的分类列表 -->
+    <select id="selectEnabledCategoriesOrderBySort" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_category
+        WHERE status = 1
+        ORDER BY sort_order ASC, created_time ASC
+    </select>
+
+</mapper>

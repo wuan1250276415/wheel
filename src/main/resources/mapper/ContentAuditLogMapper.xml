@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.ContentAuditLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.ContentAuditLog">
+        <id column="log_id" property="logId" jdbcType="BIGINT"/>
+        <result column="content_id" property="contentId" jdbcType="BIGINT"/>
+        <result column="audit_user_id" property="auditUserId" jdbcType="BIGINT"/>
+        <result column="audit_type" property="auditType" jdbcType="TINYINT"/>
+        <result column="audit_status" property="auditStatus" jdbcType="TINYINT"/>
+        <result column="audit_reason" property="auditReason" jdbcType="VARCHAR"/>
+        <result column="ai_audit_result" property="aiAuditResult" jdbcType="VARCHAR"/>
+        <result column="audit_time" property="auditTime" jdbcType="TIMESTAMP"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        log_id, content_id, audit_user_id, audit_type, audit_status, audit_reason,
+        ai_audit_result, audit_time, created_at, create_by, updated_at, update_by
+    </sql>
+
+    <!-- 根据内容ID查询审核日志 -->
+    <select id="selectByContentId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        ORDER BY audit_time DESC
+    </select>
+
+    <!-- 根据审核人ID查询审核日志 -->
+    <select id="selectByAuditUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        WHERE audit_user_id = #{auditUserId,jdbcType=BIGINT}
+        ORDER BY audit_time DESC
+    </select>
+
+    <!-- 统计审核员工作量 -->
+    <select id="countAuditWorkload" resultType="java.util.Map">
+        SELECT
+        audit_user_id as auditUserId,
+        COUNT(*) as totalCount,
+        SUM(CASE WHEN audit_status = 1 THEN 1 ELSE 0 END) as passCount,
+        SUM(CASE WHEN audit_status = 2 THEN 1 ELSE 0 END) as rejectCount
+        FROM content_audit_log
+        WHERE audit_time >= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        GROUP BY audit_user_id
+    </select>
+
+    <!-- 查询最近的审核记录 -->
+    <select id="selectRecentAuditLogs" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        ORDER BY audit_time DESC
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+
+    <!-- 批量插入审核日志 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO content_audit_log (
+        content_id, audit_user_id, audit_type, audit_status, audit_reason,
+        ai_audit_result, audit_time, created_at, create_by, updated_at, update_by
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.contentId,jdbcType=BIGINT},
+            #{item.auditUserId,jdbcType=BIGINT},
+            #{item.auditType,jdbcType=TINYINT},
+            #{item.auditStatus,jdbcType=TINYINT},
+            #{item.auditReason,jdbcType=VARCHAR},
+            #{item.aiAuditResult,jdbcType=VARCHAR},
+            #{item.auditTime,jdbcType=TIMESTAMP},
+            NOW(),
+            #{item.auditUserId,jdbcType=BIGINT},
+            NOW(),
+            #{item.auditUserId,jdbcType=BIGINT}
+            )
+        </foreach>
+    </insert>
+</mapper>

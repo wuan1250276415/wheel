@@ -1,0 +1,37 @@
+{
+  "name": "wheel-couple-frontend",
+  "version": "1.0.0",
+  "description": "情侣转盘小程序前端",
+  "main": "main.js",
+  "scripts": {
+    "dev:h5": "uni -p h5",
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:h5": "uni build -p h5",
+    "build:mp-weixin": "uni build -p mp-weixin"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-3080420231230001",
+    "@dcloudio/uni-app-plus": "3.0.0-3080420231230001",
+    "@dcloudio/uni-components": "3.0.0-3080420231230001",
+    "@dcloudio/uni-icons": "^2.0.2",
+    "@dcloudio/uni-ui": "^1.4.27",
+    "pinia": "^2.1.7",
+    "vue": "^3.3.4",
+    "vue-i18n": "^9.5.0"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.0",
+    "@dcloudio/uni-automator": "3.0.0-3080420231230001",
+    "@dcloudio/uni-cli": "3.0.0-3080420231230001",
+    "@dcloudio/uni-cli-shared": "3.0.0-3080420231230001",
+    "@dcloudio/uni-stacktracey": "3.0.0-3080420231230001",
+    "@dcloudio/uni-stat": "3.0.0-3080420231230001",
+    "sass": "^1.69.5",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.5",
+    "vue-tsc": "^1.8.22"
+  },
+  "uni-app": {
+    "scripts": {}
+  }
+}

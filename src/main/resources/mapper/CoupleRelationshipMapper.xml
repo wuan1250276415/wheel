@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.CoupleRelationshipMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.CoupleRelationship">
+        <id column="couple_id" property="coupleId" jdbcType="BIGINT"/>
+        <result column="user_id_1" property="userId1" jdbcType="BIGINT"/>
+        <result column="user_id_2" property="userId2" jdbcType="BIGINT"/>
+        <result column="relationship_type" property="relationshipType" jdbcType="TINYINT"/>
+        <result column="status" property="status" jdbcType="TINYINT"/>
+        <result column="start_date" property="startDate" jdbcType="DATE"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        couple_id, user_id_1, user_id_2, relationship_type, status, start_date,
+        created_at, create_by, updated_at, update_by
+    </sql>
+
+    <!-- 根据用户ID查询情侣关系 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_relationship
+        WHERE (user_id_1 = #{userId,jdbcType=BIGINT} OR user_id_2 = #{userId,jdbcType=BIGINT})
+        AND status = 1
+    </select>
+
+    <!-- 根据用户ID对查询情侣关系 -->
+    <select id="selectByUserIdPair" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_relationship
+        WHERE (
+            (user_id_1 = #{userId1,jdbcType=BIGINT} AND user_id_2 = #{userId2,jdbcType=BIGINT})
+            OR
+            (user_id_1 = #{userId2,jdbcType=BIGINT} AND user_id_2 = #{userId1,jdbcType=BIGINT})
+        )
+        AND status != 2
+    </select>
+
+    <!-- 查询活跃的情侣关系 -->
+    <select id="selectActiveCouples" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_relationship
+        WHERE status = 1
+        ORDER BY updated_at DESC
+    </select>
+
+    <!-- 统计今日新增情侣数 -->
+    <select id="countTodayNewCouples" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM couple_relationship
+        WHERE DATE(created_at) = CURDATE()
+        AND status = 1
+    </select>
+
+    <!-- 统计活跃情侣数 -->
+    <select id="countActiveCouples" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM couple_relationship
+        WHERE status = 1
+    </select>
+
+    <!-- 更新情侣关系状态 -->
+    <update id="updateStatus">
+        UPDATE couple_relationship
+        SET status = #{status,jdbcType=TINYINT},
+            updated_at = NOW(),
+            update_by = #{operatorId,jdbcType=BIGINT}
+        WHERE couple_id = #{coupleId,jdbcType=BIGINT}
+    </update>
+</mapper>

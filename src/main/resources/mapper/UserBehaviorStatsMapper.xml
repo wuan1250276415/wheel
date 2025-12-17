@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.UserBehaviorStatsMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.UserBehaviorStats">
+        <id column="stats_id" property="statsId" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="stats_date" property="statsDate" jdbcType="DATE"/>
+        <result column="login_count" property="loginCount" jdbcType="INTEGER"/>
+        <result column="spin_count" property="spinCount" jdbcType="INTEGER"/>
+        <result column="content_create_count" property="contentCreateCount" jdbcType="INTEGER"/>
+        <result column="online_duration" property="onlineDuration" jdbcType="INTEGER"/>
+        <result column="last_active_time" property="lastActiveTime" jdbcType="TIMESTAMP"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        stats_id, user_id, stats_date, login_count, spin_count, content_create_count,
+        online_duration, last_active_time, created_at, create_by, updated_at, update_by
+    </sql>
+
+    <!-- 根据用户ID和日期查询统计数据 -->
+    <select id="selectByUserIdAndDate" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_behavior_stats
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND stats_date = #{statsDate,jdbcType=DATE}
+    </select>
+
+    <!-- 查询用户最近N天的统计数据 -->
+    <select id="selectRecentStatsByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_behavior_stats
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND stats_date >= DATE_SUB(CURDATE(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        ORDER BY stats_date DESC
+    </select>
+
+    <!-- 批量插入或更新统计数据 -->
+    <insert id="batchInsertOrUpdate" parameterType="java.util.List">
+        INSERT INTO user_behavior_stats (
+        user_id, stats_date, login_count, spin_count, content_create_count,
+        online_duration, last_active_time, created_at, create_by, updated_at, update_by
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.userId,jdbcType=BIGINT},
+            #{item.statsDate,jdbcType=DATE},
+            #{item.loginCount,jdbcType=INTEGER},
+            #{item.spinCount,jdbcType=INTEGER},
+            #{item.contentCreateCount,jdbcType=INTEGER},
+            #{item.onlineDuration,jdbcType=INTEGER},
+            #{item.lastActiveTime,jdbcType=TIMESTAMP},
+            NOW(),
+            #{item.userId,jdbcType=BIGINT},
+            NOW(),
+            #{item.userId,jdbcType=BIGINT}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+        login_count = VALUES(login_count),
+        spin_count = VALUES(spin_count),
+        content_create_count = VALUES(content_create_count),
+        online_duration = VALUES(online_duration),
+        last_active_time = VALUES(last_active_time),
+        updated_at = NOW(),
+        update_by = VALUES(update_by)
+    </insert>
+
+    <!-- 更新用户行为统计 -->
+    <update id="updateUserStats">
+        UPDATE user_behavior_stats
+        SET
+        <if test="loginCount != null">login_count = #{loginCount,jdbcType=INTEGER},</if>
+        <if test="spinCount != null">spin_count = #{spinCount,jdbcType=INTEGER},</if>
+        <if test="contentCreateCount != null">content_create_count = #{contentCreateCount,jdbcType=INTEGER},</if>
+        <if test="onlineDuration != null">online_duration = #{onlineDuration,jdbcType=INTEGER},</if>
+        <if test="lastActiveTime != null">last_active_time = #{lastActiveTime,jdbcType=TIMESTAMP},</if>
+        updated_at = NOW(),
+        update_by = #{userId,jdbcType=BIGINT}
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND stats_date = #{statsDate,jdbcType=DATE}
+    </update>
+
+    <!-- 统计活跃用户数 -->
+    <select id="countActiveUsers" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT user_id) FROM user_behavior_stats
+        WHERE stats_date >= DATE_SUB(CURDATE(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        AND (login_count > 0 OR spin_count > 0)
+    </select>
+
+    <!-- 统计用户总使用时长 -->
+    <select id="getUserTotalOnlineTime" resultType="java.lang.Long">
+        SELECT SUM(online_duration) FROM user_behavior_stats
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND stats_date >= DATE_SUB(CURDATE(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+    </select>
+</mapper>

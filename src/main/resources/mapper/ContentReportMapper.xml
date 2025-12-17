@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.ContentReportMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.ContentReport">
+        <id column="report_id" property="reportId" jdbcType="BIGINT"/>
+        <result column="content_id" property="contentId" jdbcType="BIGINT"/>
+        <result column="report_user_id" property="reportUserId" jdbcType="BIGINT"/>
+        <result column="report_type" property="reportType" jdbcType="TINYINT"/>
+        <result column="report_reason" property="reportReason" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="report_time" property="reportTime" jdbcType="TIMESTAMP"/>
+        <result column="handle_status" property="handleStatus" jdbcType="TINYINT"/>
+        <result column="handle_user_id" property="handleUserId" jdbcType="BIGINT"/>
+        <result column="handle_time" property="handleTime" jdbcType="TIMESTAMP"/>
+        <result column="handle_result" property="handleResult" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        report_id, content_id, report_user_id, report_type, report_reason, description,
+        report_time, handle_status, handle_user_id, handle_time, handle_result,
+        created_at, create_by, updated_at, update_by
+    </sql>
+
+    <!-- 根据内容ID查询举报记录 -->
+    <select id="selectByContentId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_report
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        ORDER BY report_time DESC
+    </select>
+
+    <!-- 根据举报人ID查询举报记录 -->
+    <select id="selectByReportUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_report
+        WHERE report_user_id = #{reportUserId,jdbcType=BIGINT}
+        ORDER BY report_time DESC
+    </select>
+
+    <!-- 查询未处理的举报 -->
+    <select id="selectUnhandledReports" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_report
+        WHERE handle_status = 0
+        ORDER BY report_time ASC
+    </select>
+
+    <!-- 统计举报类型分布 -->
+    <select id="countReportTypes" resultType="java.util.Map">
+        SELECT
+        report_type as reportType,
+        COUNT(*) as count
+        FROM content_report
+        WHERE report_time >= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        GROUP BY report_type
+    </select>
+
+    <!-- 更新处理状态 -->
+    <update id="updateHandleStatus">
+        UPDATE content_report
+        SET handle_status = #{handleStatus,jdbcType=TINYINT},
+            handle_user_id = #{handleUserId,jdbcType=BIGINT},
+            handle_time = NOW(),
+            handle_result = #{handleResult,jdbcType=VARCHAR},
+            updated_at = NOW(),
+            update_by = #{handleUserId,jdbcType=BIGINT}
+        WHERE report_id = #{reportId,jdbcType=BIGINT}
+    </update>
+
+    <!-- 批量更新处理状态 -->
+    <update id="batchUpdateHandleStatus">
+        UPDATE content_report
+        SET handle_status = #{handleStatus,jdbcType=TINYINT},
+            handle_user_id = #{handleUserId,jdbcType=BIGINT},
+            handle_time = NOW(),
+            handle_result = #{handleResult,jdbcType=VARCHAR},
+            updated_at = NOW(),
+            update_by = #{handleUserId,jdbcType=BIGINT}
+        WHERE report_id IN
+        <foreach collection="reportIds" item="id" open="(" separator="," close=")">
+            #{id,jdbcType=BIGINT}
+        </foreach>
+    </update>
+
+    <!-- 查询重复举报 -->
+    <select id="selectDuplicateReports" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_report
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND handle_status = 0
+        AND report_time >= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+    </select>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.WheelContentMapper">
+  <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelContent">
+    <!--@mbg.generated-->
+    <!--@Table wheel_api.wheel_content-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="category_id" jdbcType="BIGINT" property="categoryId" />
+    <result column="content_text" jdbcType="VARCHAR" property="contentText" />
+    <result column="weight" jdbcType="DOUBLE" property="weight" />
+    <result column="create_user_id" jdbcType="BIGINT" property="createUserId" />
+    <result column="audit_status" jdbcType="BOOLEAN" property="auditStatus" />
+    <result column="auditor_id" jdbcType="BIGINT" property="auditorId" />
+    <result column="audited_at" jdbcType="TIMESTAMP" property="auditedAt" />
+    <result column="audit_comment" jdbcType="LONGVARCHAR" property="auditComment" />
+    <result column="tags" jdbcType="VARCHAR" property="tags" />
+    <result column="is_system" jdbcType="BOOLEAN" property="isSystem" />
+    <result column="status" jdbcType="BOOLEAN" property="status" />
+    <result column="created_time" jdbcType="TIMESTAMP" property="createdTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="created_by" jdbcType="BIGINT" property="createdBy" />
+    <result column="updated_by" jdbcType="BIGINT" property="updatedBy" />
+    <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, category_id, content_text, weight, create_user_id, audit_status, auditor_id, 
+    audited_at, audit_comment, tags, is_system, `status`, created_time, update_time, 
+    created_by, updated_by, deleted
+  </sql>
+
+
+    <!-- 根据分类ID和审核状态查询内容 -->
+    <select id="selectByCategoryIdAndAuditStatus" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_content
+        WHERE category_id = #{categoryId,jdbcType=BIGINT}
+        AND audit_status = #{auditStatus,jdbcType=TINYINT}
+        AND status != 2
+        ORDER BY created_time DESC
+    </select>
+
+    <!-- 查询用户创建的内容列表 -->
+    <select id="selectByCreateUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_content
+        WHERE create_user_id = #{userId,jdbcType=BIGINT}
+        AND status != 2
+        ORDER BY created_time DESC
+        <if test="pageNum != null and pageSize != null">
+            LIMIT #{pageNum,jdbcType=INTEGER}, #{pageSize,jdbcType=INTEGER}
+        </if>
+    </select>
+
+    <!-- 统计用户创建的内容数量 -->
+    <select id="countByCreateUserId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wheel_content
+        WHERE create_user_id = #{userId,jdbcType=BIGINT}
+        AND status != 2
+    </select>
+</mapper>

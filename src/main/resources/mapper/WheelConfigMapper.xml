@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.WheelConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelConfig">
+        <id column="config_id" property="configId" jdbcType="BIGINT"/>
+        <result column="config_key" property="configKey" jdbcType="VARCHAR"/>
+        <result column="config_value" property="configValue" jdbcType="VARCHAR"/>
+        <result column="config_type" property="configType" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="TINYINT"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        config_id, config_key, config_value, config_type, description, status,
+        created_at, create_by, updated_at, update_by
+    </sql>
+
+    <!-- 根据配置键查询配置 -->
+    <select id="selectByConfigKey" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM wheel_config
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+        AND status = 1
+    </select>
+
+    <!-- 根据配置类型查询配置列表 -->
+    <select id="selectByConfigType" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM wheel_config
+        WHERE config_type = #{configType,jdbcType=VARCHAR}
+        AND status = 1
+        ORDER BY config_key ASC
+    </select>
+
+    <!-- 查询所有启用的配置 -->
+    <select id="selectEnabledConfigs" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM wheel_config
+        WHERE status = 1
+        ORDER BY config_type ASC, config_key ASC
+    </select>
+
+    <!-- 更新配置值 -->
+    <update id="updateConfigValue">
+        UPDATE wheel_config
+        SET config_value = #{configValue,jdbcType=VARCHAR},
+            updated_at = NOW(),
+            update_by = #{operatorId,jdbcType=BIGINT}
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 批量更新配置 -->
+    <update id="batchUpdateConfigs">
+        UPDATE wheel_config
+        SET config_value = #{configValue,jdbcType=VARCHAR},
+            updated_at = NOW(),
+            update_by = #{operatorId,jdbcType=BIGINT}
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 插入新配置 -->
+    <insert id="insertConfig" parameterType="com.basebackend.wheel.entity.WheelConfig">
+        INSERT INTO wheel_config (
+        config_key, config_value, config_type, description, status,
+        created_at, create_by, updated_at, update_by
+        ) VALUES (
+        #{configKey,jdbcType=VARCHAR},
+        #{configValue,jdbcType=VARCHAR},
+        #{configType,jdbcType=VARCHAR},
+        #{description,jdbcType=VARCHAR},
+        #{status,jdbcType=TINYINT},
+        NOW(),
+        #{createBy,jdbcType=BIGINT},
+        NOW(),
+        #{createBy,jdbcType=BIGINT}
+        )
+    </insert>
+
+    <!-- 删除配置（软删除） -->
+    <update id="deleteConfig">
+        UPDATE wheel_config
+        SET status = 2,
+            updated_at = NOW(),
+            update_by = #{operatorId,jdbcType=BIGINT}
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 检查配置键是否存在 -->
+    <select id="existsConfigKey" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM wheel_config
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+        AND status != 2
+    </select>
+</mapper>
