@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,6 +28,12 @@ import java.util.List;
 @Service
 @Transactional
 public class CoupleServiceImpl implements CoupleService {
+
+    private static final String INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final int INVITE_CODE_LENGTH = 8;
+    private static final int INVITE_CODE_MAX_ATTEMPTS = 5;
+
+    private final SecureRandom random = new SecureRandom();
 
     @Autowired
     private CoupleRelationshipMapper coupleMapper;
@@ -72,6 +79,7 @@ public class CoupleServiceImpl implements CoupleService {
         relationship.setUserId1(userId);
         relationship.setUserId2(partner.getId());
         relationship.setStatus(0); // 待确认
+        relationship.setInviteCode(generateInviteCode());
 
         // 设置审计字段
         AuditHelper.setCreateAuditFields(relationship, userId);
@@ -175,7 +183,7 @@ public class CoupleServiceImpl implements CoupleService {
             }
 
             status.setInviteCode(confirmed.getInviteCode());
-            status.setCreatedAt(confirmed.getCreatedAt().toString());
+            status.setCreatedAt(confirmed.getCreateTime().toString());
         } else {
             // 查找待确认的关系
             CoupleRelationship pending = relationships.stream()
@@ -200,7 +208,7 @@ public class CoupleServiceImpl implements CoupleService {
                 }
 
                 status.setInviteCode(pending.getInviteCode());
-                status.setCreatedAt(pending.getCreatedAt().toString());
+                status.setCreatedAt(pending.getCreateTime().toString());
             } else {
                 // 无关系
                 status.setStatus(0);
@@ -255,7 +263,7 @@ public class CoupleServiceImpl implements CoupleService {
         info.setAvatarUrl2(user2.getAvatarUrl());
         info.setStatus("confirmed");
         info.setConfirmedAt(relationship.getConfirmedAt().toString());
-        info.setCreatedAt(relationship.getCreatedAt().toString());
+        info.setCreatedAt(relationship.getCreateTime().toString());
 
         return info;
     }
@@ -268,5 +276,20 @@ public class CoupleServiceImpl implements CoupleService {
 
         CoupleRelationship relationship = coupleMapper.selectByInviteCode(inviteCode);
         return relationship != null && relationship.getStatus() == 0;
+    }
+
+    private String generateInviteCode() {
+        for (int attempt = 0; attempt < INVITE_CODE_MAX_ATTEMPTS; attempt++) {
+            StringBuilder builder = new StringBuilder(INVITE_CODE_LENGTH);
+            for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+                int index = random.nextInt(INVITE_CODE_CHARS.length());
+                builder.append(INVITE_CODE_CHARS.charAt(index));
+            }
+            String code = builder.toString();
+            if (coupleMapper.selectByInviteCode(code) == null) {
+                return code;
+            }
+        }
+        throw new BusinessException("邀请码生成失败，请稍后重试");
     }
 }

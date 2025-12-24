@@ -1,22 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as authApi from '@/api/auth'
+import type { UserInfo } from '@/api/auth'
 
 export const useUserStore = defineStore('user', () => {
   // 状态
   const token = ref<string>('')
   const refreshToken = ref<string>('')
-  const userInfo = ref<{
-    id: number
-    nickname: string
-    avatar: string
-    phone: string
-  } | null>(null)
+  const userInfo = ref<UserInfo | null>(null)
 
   // 计算属性
   const isLoggedIn = computed(() => !!token.value)
   const hasCouple = computed(() => {
-    return userInfo.value?.coupleId !== null && userInfo.value?.coupleId !== undefined
+    return (userInfo.value as any)?.coupleId !== null && (userInfo.value as any)?.coupleId !== undefined
   })
 
   // 初始化 - 从本地存储恢复状态
@@ -36,25 +32,26 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 登录
-  async function login(phone: string, password: string) {
+  // 登录 - 使用username和password
+  async function login(username: string, password: string) {
     try {
-      const res = await authApi.login({ phone, password })
+      const res = await authApi.login({ username, password })
 
-      if (res.code === 200) {
-        token.value = res.data.accessToken
-        refreshToken.value = res.data.refreshToken
-        userInfo.value = res.data.userInfo
-
-        // 保存到本地存储
-        uni.setStorageSync('token', res.data.accessToken)
-        uni.setStorageSync('refreshToken', res.data.refreshToken)
-        uni.setStorageSync('userInfo', res.data.userInfo)
-
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
+      // 存储token和用户信息
+      token.value = res.accessToken
+      if (res.refreshToken) {
+        refreshToken.value = res.refreshToken
       }
+      userInfo.value = res.userInfo
+
+      // 保存到本地存储
+      uni.setStorageSync('token', res.accessToken)
+      if (res.refreshToken) {
+        uni.setStorageSync('refreshToken', res.refreshToken)
+      }
+      uni.setStorageSync('userInfo', res.userInfo)
+
+      return { success: true }
     } catch (error: any) {
       return { success: false, message: error.message || '登录失败' }
     }
@@ -62,19 +59,14 @@ export const useUserStore = defineStore('user', () => {
 
   // 注册
   async function register(data: {
-    phone: string
+    username: string
     password: string
-    nickname: string
+    nickname?: string
     avatar?: string
   }) {
     try {
-      const res = await authApi.register(data)
-
-      if (res.code === 200) {
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
+      await authApi.register(data)
+      return { success: true }
     } catch (error: any) {
       return { success: false, message: error.message || '注册失败' }
     }
@@ -84,14 +76,9 @@ export const useUserStore = defineStore('user', () => {
   async function fetchUserInfo() {
     try {
       const res = await authApi.getUserInfo()
-
-      if (res.code === 200) {
-        userInfo.value = res.data
-        uni.setStorageSync('userInfo', res.data)
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
+      userInfo.value = res
+      uni.setStorageSync('userInfo', res)
+      return { success: true }
     } catch (error: any) {
       return { success: false, message: error.message || '获取用户信息失败' }
     }
@@ -103,15 +90,10 @@ export const useUserStore = defineStore('user', () => {
     avatar?: string
   }) {
     try {
-      const res = await authApi.updateProfile(data)
-
-      if (res.code === 200) {
-        // 重新获取用户信息
-        await fetchUserInfo()
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
+      await authApi.updateProfile(data)
+      // 重新获取用户信息
+      await fetchUserInfo()
+      return { success: true }
     } catch (error: any) {
       return { success: false, message: error.message || '更新失败' }
     }
@@ -137,17 +119,13 @@ export const useUserStore = defineStore('user', () => {
 
       const res = await authApi.refreshToken(refreshToken.value)
 
-      if (res.code === 200) {
-        token.value = res.data.accessToken
-        refreshToken.value = res.data.refreshToken
+      token.value = res.accessToken
+      refreshToken.value = res.refreshToken
 
-        uni.setStorageSync('token', res.data.accessToken)
-        uni.setStorageSync('refreshToken', res.data.refreshToken)
+      uni.setStorageSync('token', res.accessToken)
+      uni.setStorageSync('refreshToken', res.refreshToken)
 
-        return { success: true }
-      } else {
-        throw new Error(res.message)
-      }
+      return { success: true }
     } catch (error) {
       // 刷新失败，清除登录信息
       logout()

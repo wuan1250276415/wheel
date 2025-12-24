@@ -1,6 +1,9 @@
 package com.basebackend.wheel.controller;
 
 import com.basebackend.common.context.UserContextHolder;
+import com.basebackend.common.model.PageResult; // Add import
+import com.basebackend.common.model.Result;
+import com.basebackend.jwt.JwtUserDetails;
 import com.basebackend.wheel.dto.WheelSpinDTO;
 import com.basebackend.wheel.dto.WheelSpinResultDTO;
 import com.basebackend.wheel.entity.WheelCategory;
@@ -11,12 +14,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 转盘控制器
@@ -35,10 +40,10 @@ public class WheelController {
 
     @Operation(summary = "获取转盘分类", description = "获取所有可用的转盘分类列表")
     @GetMapping("/categories")
-    public ResponseEntity<List<WheelCategory>> getCategories() {
+    public Result<List<WheelCategory>> getCategories() {
         try {
             List<WheelCategory> categories = wheelSpinService.getCategories();
-            return ResponseEntity.ok(categories);
+            return Result.success(categories);
         } catch (Exception e) {
             log.error("获取转盘分类失败: error={}", e.getMessage());
             throw e;
@@ -47,11 +52,11 @@ public class WheelController {
 
     @Operation(summary = "获取转盘内容", description = "根据分类ID获取转盘内容（为空则获取所有分类的内容）")
     @GetMapping("/contents")
-    public ResponseEntity<List<WheelContent>> getContents(
+    public Result<List<WheelContent>> getContents(
             @RequestParam(required = false) List<Long> categoryIds) {
         try {
             List<WheelContent> contents = wheelSpinService.getContents(categoryIds);
-            return ResponseEntity.ok(contents);
+            return Result.success(contents);
         } catch (Exception e) {
             log.error("获取转盘内容失败: error={}", e.getMessage());
             throw e;
@@ -60,13 +65,16 @@ public class WheelController {
 
     @Operation(summary = "执行转盘", description = "根据参数执行转盘，返回随机选中的内容")
     @PostMapping("/spin")
-    public ResponseEntity<WheelSpinResultDTO> spin(
+    public Result<WheelSpinResultDTO> spin(
             @Valid @RequestBody WheelSpinDTO spinDTO) {
         try {
             Long userId = UserContextHolder.getUserId();
+            if (Objects.isNull(userId)) {
+                return Result.error(401, "未登录，请先登录");
+            }
             WheelSpinResultDTO result = wheelSpinService.spin(userId, spinDTO);
             log.info("转盘成功: userId={}", userId);
-            return ResponseEntity.ok(result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("转盘失败: error={}", e.getMessage());
             throw e;
@@ -75,14 +83,14 @@ public class WheelController {
 
     @Operation(summary = "获取转盘历史", description = "获取当前用户的转盘历史记录")
     @GetMapping("/history")
-    public ResponseEntity<List<WheelSpinRecord>> getHistory(
+    public Result<PageResult<WheelSpinRecord>> getHistory(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize,
             HttpServletRequest request) {
         try {
             Long userId = UserContextHolder.getUserId();
-            List<WheelSpinRecord> history = wheelSpinService.getHistory(userId, pageNum, pageSize);
-            return ResponseEntity.ok(history);
+            PageResult<WheelSpinRecord> history = wheelSpinService.getHistory(userId, pageNum, pageSize);
+            return Result.success(history);
         } catch (Exception e) {
             log.error("获取转盘历史失败: error={}", e.getMessage());
             throw e;
@@ -91,11 +99,11 @@ public class WheelController {
 
     @Operation(summary = "获取用户统计", description = "获取当前用户的使用统计信息")
     @GetMapping("/stats")
-    public ResponseEntity<WheelSpinService.UserStats> getStats(HttpServletRequest request) {
+    public Result<WheelSpinService.UserStats> getStats(HttpServletRequest request) {
         try {
             Long userId = UserContextHolder.getUserId();
             WheelSpinService.UserStats stats = wheelSpinService.getStats(userId);
-            return ResponseEntity.ok(stats);
+            return Result.success(stats);
         } catch (Exception e) {
             log.error("获取用户统计失败: error={}", e.getMessage());
             throw e;

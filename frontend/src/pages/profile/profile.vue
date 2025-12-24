@@ -45,8 +45,36 @@
       </view>
     </view>
 
+    <!-- 今日数据卡片 -->
+    <view class="today-stats-card">
+      <view class="today-stats-title">今日数据</view>
+      <view class="today-stats-row">
+        <view class="today-stat-item">
+          <text class="today-stat-value">{{ userStats.todaySpins || 0 }}</text>
+          <text class="today-stat-label">今日转盘</text>
+        </view>
+        <view class="today-stat-item">
+          <text class="today-stat-value">{{ userStats.totalCoupleSpins || 0 }}</text>
+          <text class="today-stat-label">情侣转盘</text>
+        </view>
+        <view class="today-stat-item">
+          <text class="today-stat-value">{{ userStats.favoriteCategory || '暂无' }}</text>
+          <text class="today-stat-label">最爱分类</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 功能列表 -->
     <view class="menu-list">
+      <view class="menu-item highlight" @click="navigateTo('/pages/content/content')">
+        <view class="menu-icon content-icon"></view>
+        <view class="menu-text-group">
+          <text class="menu-text">内容管理</text>
+          <text class="menu-subtitle">管理我提交的转盘内容</text>
+        </view>
+        <text class="menu-arrow">></text>
+      </view>
+
       <view class="menu-item" @click="navigateTo('/pages/couple/couple')">
         <view class="menu-icon couple-icon"></view>
         <text class="menu-text">情侣关系</text>
@@ -56,12 +84,6 @@
       <view class="menu-item" @click="navigateTo('/pages/statistics/statistics')">
         <view class="menu-icon stats-icon"></view>
         <text class="menu-text">数据统计</text>
-        <text class="menu-arrow">></text>
-      </view>
-
-      <view class="menu-item" @click="navigateTo('/pages/content/content')">
-        <view class="menu-icon content-icon"></view>
-        <text class="menu-text">内容中心</text>
         <text class="menu-arrow">></text>
       </view>
     </view>
@@ -116,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import * as statisticsApi from '@/api/statistics'
 
@@ -128,9 +150,17 @@ const showEditDialog = ref(false)
 const editForm = ref({
   nickname: ''
 })
+const isLoading = ref(false)
+
+// 监听userStore的userInfo变化
+watch(() => userStore.userInfo, (newVal) => {
+  userInfo.value = newVal
+}, { deep: true })
 
 // 页面加载
 onMounted(() => {
+  // 初始化用户Store
+  userStore.init()
   initData()
 })
 
@@ -141,17 +171,42 @@ async function initData() {
       title: '请先登录',
       icon: 'none'
     })
+    // 跳转到登录页
+    setTimeout(() => {
+      uni.redirectTo({
+        url: '/pages/login/login'
+      })
+    }, 1500)
     return
   }
+
+  // 更新用户信息引用
+  userInfo.value = userStore.userInfo
+  
+  // 初始化编辑表单
+  if (userInfo.value?.nickname) {
+    editForm.value.nickname = userInfo.value.nickname
+  }
+
+  isLoading.value = true
 
   try {
     // 获取用户统计
     const statsRes = await statisticsApi.getUserStatistics()
-    if (statsRes.code === 200) {
-      userStats.value = statsRes.data
+    if (statsRes.code === 200 && statsRes.data) {
+      userStats.value = {
+        totalSpins: statsRes.data.totalSpins || 0,
+        todaySpins: statsRes.data.todaySpins || 0,
+        consecutiveDays: statsRes.data.consecutiveDays || 0,
+        uniqueContentsSeen: statsRes.data.uniqueContentsSeen || 0,
+        totalCoupleSpins: statsRes.data.totalCoupleSpins || 0,
+        favoriteCategory: statsRes.data.favoriteCategory || '暂无'
+      }
     }
   } catch (error) {
     console.error('获取用户统计失败:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -350,6 +405,44 @@ function navigateTo(url: string) {
   background: #f0f0f0;
 }
 
+.today-stats-card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
+  margin-bottom: 30rpx;
+}
+
+.today-stats-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.today-stats-row {
+  display: flex;
+  justify-content: space-around;
+}
+
+.today-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.today-stat-value {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #FF69B4;
+  margin-bottom: 8rpx;
+}
+
+.today-stat-label {
+  font-size: 22rpx;
+  color: #999;
+}
+
 .menu-list {
   background: #fff;
   border-radius: 20rpx;
@@ -400,6 +493,23 @@ function navigateTo(url: string) {
   flex: 1;
   font-size: 30rpx;
   color: #333;
+}
+
+.menu-text-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-subtitle {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 5rpx;
+}
+
+.menu-item.highlight {
+  background: linear-gradient(135deg, #FFF0F5, #FFFFFF);
+  border: 2rpx solid #FF69B4;
 }
 
 .logout-text {

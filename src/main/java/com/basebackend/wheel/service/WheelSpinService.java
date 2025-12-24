@@ -1,5 +1,6 @@
 package com.basebackend.wheel.service;
 
+import com.basebackend.common.model.PageResult;
 import com.basebackend.wheel.dto.WheelSpinDTO;
 import com.basebackend.wheel.dto.WheelSpinResultDTO;
 import com.basebackend.wheel.entity.WheelCategory;
@@ -35,7 +36,7 @@ public interface WheelSpinService {
     /**
      * 执行转盘
      *
-     * @param userId 用户ID
+     * @param userId  用户ID
      * @param spinDTO 转盘参数
      * @return 转盘结果
      */
@@ -44,12 +45,12 @@ public interface WheelSpinService {
     /**
      * 获取用户历史记录
      *
-     * @param userId 用户ID
-     * @param pageNum 页码
+     * @param userId   用户ID
+     * @param pageNum  页码
      * @param pageSize 每页大小
-     * @return 历史记录列表
+     * @return 历史记录分页结果
      */
-    List<WheelSpinRecord> getHistory(Long userId, Integer pageNum, Integer pageSize);
+    PageResult<WheelSpinRecord> getHistory(Long userId, Integer pageNum, Integer pageSize);
 
     /**
      * 获取用户使用统计
@@ -62,7 +63,7 @@ public interface WheelSpinService {
     /**
      * 校验转盘频率
      *
-     * @param userId 用户ID
+     * @param userId    用户ID
      * @param ipAddress IP地址
      * @return 验证结果
      */

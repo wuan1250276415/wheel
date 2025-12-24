@@ -106,18 +106,12 @@ public class AuditHelper {
             return;
         }
         try {
-            // 通过反射设置审计字段
-            java.lang.reflect.Field createdAtField = entity.getClass().getDeclaredField("createdAt");
-            createdAtField.setAccessible(true);
-            if (createdAtField.get(entity) == null) {
-                createdAtField.set(entity, LocalDateTime.now());
-            }
-
-            java.lang.reflect.Field createByField = entity.getClass().getDeclaredField("createBy");
-            createByField.setAccessible(true);
-            if (createByField.get(entity) == null) {
-                createByField.set(entity, userId);
-            }
+            LocalDateTime now = LocalDateTime.now();
+            setFieldIfNull(entity, "createdAt", now);
+            setFieldIfNull(entity, "createdTime", now);
+            setFieldIfNull(entity, "createTime", now);
+            setFieldIfNull(entity, "createdBy", userId);
+            setFieldIfNull(entity, "createBy", userId);
 
             // 同时更新更新字段
             setUpdateAuditFields(entity, userId);
@@ -137,15 +131,46 @@ public class AuditHelper {
             return;
         }
         try {
-            java.lang.reflect.Field updatedAtField = entity.getClass().getDeclaredField("updatedAt");
-            updatedAtField.setAccessible(true);
-            updatedAtField.set(entity, LocalDateTime.now());
-
-            java.lang.reflect.Field updateByField = entity.getClass().getDeclaredField("updateBy");
-            updateByField.setAccessible(true);
-            updateByField.set(entity, userId);
+            LocalDateTime now = LocalDateTime.now();
+            setField(entity, "updatedAt", now);
+            setField(entity, "updatedTime", now);
+            setField(entity, "updateTime", now);
+            setField(entity, "updatedBy", userId);
+            setField(entity, "updateBy", userId);
         } catch (Exception e) {
             log.debug("设置更新审计字段失败: {}", e.getMessage());
         }
+    }
+
+    private static void setFieldIfNull(Object entity, String fieldName, Object value) throws IllegalAccessException {
+        java.lang.reflect.Field field = findField(entity.getClass(), fieldName);
+        if (field == null) {
+            return;
+        }
+        field.setAccessible(true);
+        if (field.get(entity) == null) {
+            field.set(entity, value);
+        }
+    }
+
+    private static void setField(Object entity, String fieldName, Object value) throws IllegalAccessException {
+        java.lang.reflect.Field field = findField(entity.getClass(), fieldName);
+        if (field == null) {
+            return;
+        }
+        field.setAccessible(true);
+        field.set(entity, value);
+    }
+
+    private static java.lang.reflect.Field findField(Class<?> type, String fieldName) {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
     }
 }

@@ -7,10 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -201,7 +207,7 @@ public class WheelCacheService {
     public void clearAllCache() {
         try {
             // 获取所有wheel相关的key
-            var keys = redisTemplate.keys(CACHE_PREFIX + "*");
+            Set<String> keys = scanKeys(CACHE_PREFIX + "*");
             if (keys != null && !keys.isEmpty()) {
                 redisTemplate.delete(keys);
             }
@@ -209,5 +215,19 @@ public class WheelCacheService {
         } catch (Exception e) {
             log.warn("清空所有缓存失败: {}", e.getMessage());
         }
+    }
+
+    private Set<String> scanKeys(String pattern) {
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
+        Set<String> keys = new HashSet<>();
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                }
+            }
+            return null;
+        });
+        return keys;
     }
 }

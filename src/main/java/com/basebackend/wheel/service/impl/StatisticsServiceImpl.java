@@ -119,10 +119,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             avgDurationWrapper.select("AVG(spin_duration) as avg_duration")
                 .eq("user_id", userId)
                 .isNotNull("spin_duration");
-            Map<String, Object> avgDurationResult = spinRecordMapper.selectMaps(avgDurationWrapper).get(0);
-            Double avgDuration = avgDurationResult != null && avgDurationResult.get("avg_duration") != null
-                ? ((BigDecimal) avgDurationResult.get("avg_duration")).doubleValue()
-                : 0.0;
+            Map<String, Object> avgDurationResult = firstMap(spinRecordMapper.selectMaps(avgDurationWrapper));
+            Double avgDuration = getDoubleValue(avgDurationResult, "avg_duration");
             stats.setAvgSpinDuration(avgDuration.longValue());
 
             // 获取连续使用天数
@@ -159,10 +157,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             QueryWrapper<WheelSpinRecord> uniqueContentWrapper = new QueryWrapper<>();
             uniqueContentWrapper.select("COUNT(DISTINCT content_id) as unique_count")
                 .eq("user_id", userId);
-            Map<String, Object> uniqueContentResult = spinRecordMapper.selectMaps(uniqueContentWrapper).get(0);
-            Long uniqueContents = uniqueContentResult != null && uniqueContentResult.get("unique_count") != null
-                ? ((BigDecimal) uniqueContentResult.get("unique_count")).longValue()
-                : 0L;
+            Map<String, Object> uniqueContentResult = firstMap(spinRecordMapper.selectMaps(uniqueContentWrapper));
+            Long uniqueContents = getLongValue(uniqueContentResult, "unique_count");
             stats.setUniqueContentsSeen(uniqueContents);
 
             // 获取最后转盘时间
@@ -214,14 +210,14 @@ public class StatisticsServiceImpl implements StatisticsService {
             LocalDateTime todayStart = LocalDate.now().atStartOfDay();
             Long todayNewUsers = userMapper.selectCount(
                 new LambdaQueryWrapper<WheelUser>()
-                    .ge(WheelUser::getCreatedAt, todayStart)
+                    .ge(WheelUser::getCreateTime, todayStart)
             );
             overview.setTodayNewUsers(todayNewUsers != null ? todayNewUsers : 0L);
 
             // 获取今日新增情侣关系数
             Long todayNewCouples = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getCreatedAt, todayStart)
+                    .ge(CoupleRelationship::getCreateTime, todayStart)
             );
             overview.setTodayNewCouples(todayNewCouples != null ? todayNewCouples : 0L);
 
@@ -286,10 +282,8 @@ public class StatisticsServiceImpl implements StatisticsService {
                 userCountWrapper.select("COUNT(DISTINCT user_id) as user_count")
                     .ge("spin_time", dayStart)
                     .le("spin_time", dayEnd);
-                Map<String, Object> userCountResult = spinRecordMapper.selectMaps(userCountWrapper).get(0);
-                Long userCount = userCountResult != null && userCountResult.get("user_count") != null
-                    ? ((BigDecimal) userCountResult.get("user_count")).longValue()
-                    : 0L;
+                Map<String, Object> userCountResult = firstMap(spinRecordMapper.selectMaps(userCountWrapper));
+                Long userCount = getLongValue(userCountResult, "user_count");
 
                 // 获取当天的情侣转盘次数（设备ID不为空）
                 Long coupleCount = spinRecordMapper.selectCount(
@@ -333,10 +327,10 @@ public class StatisticsServiceImpl implements StatisticsService {
             List<Map<String, Object>> results = spinRecordMapper.selectMaps(queryWrapper);
 
             for (Map<String, Object> result : results) {
-                Long contentId = ((BigDecimal) result.get("content_id")).longValue();
+                Long contentId = getLongValue(result, "content_id");
                 String contentText = (String) result.get("result_text");
-                Long spinCount = ((BigDecimal) result.get("spin_count")).longValue();
-                Long categoryId = ((BigDecimal) result.get("category_id")).longValue();
+                Long spinCount = getLongValue(result, "spin_count");
+                Long categoryId = getLongValue(result, "category_id");
 
                 // 获取分类名称
                 WheelCategory category = categoryMapper.selectById(categoryId);
@@ -395,19 +389,15 @@ public class StatisticsServiceImpl implements StatisticsService {
                 avgWeightWrapper.select("AVG(weight) as avg_weight")
                     .eq("category_id", categoryId)
                     .eq("audit_status", 1);
-                Map<String, Object> avgWeightResult = contentMapper.selectMaps(avgWeightWrapper).get(0);
-                Double avgWeight = avgWeightResult != null && avgWeightResult.get("avg_weight") != null
-                    ? ((BigDecimal) avgWeightResult.get("avg_weight")).doubleValue()
-                    : 1.0;
+                Map<String, Object> avgWeightResult = firstMap(contentMapper.selectMaps(avgWeightWrapper));
+                Double avgWeight = getDoubleValue(avgWeightResult, "avg_weight");
 
                 // 获取该分类的独立用户数
                 QueryWrapper<WheelSpinRecord> uniqueUsersWrapper = new QueryWrapper<>();
                 uniqueUsersWrapper.select("COUNT(DISTINCT user_id) as user_count")
                     .eq("category_id", categoryId);
-                Map<String, Object> uniqueUsersResult = spinRecordMapper.selectMaps(uniqueUsersWrapper).get(0);
-                Long uniqueUsers = uniqueUsersResult != null && uniqueUsersResult.get("user_count") != null
-                    ? ((BigDecimal) uniqueUsersResult.get("user_count")).longValue()
-                    : 0L;
+                Map<String, Object> uniqueUsersResult = firstMap(spinRecordMapper.selectMaps(uniqueUsersWrapper));
+                Long uniqueUsers = getLongValue(uniqueUsersResult, "user_count");
 
                 CategoryStatistics stats = new CategoryStatistics();
                 stats.setCategoryId(categoryId);
@@ -441,21 +431,21 @@ public class StatisticsServiceImpl implements StatisticsService {
             LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
             Long activeCouples = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getUpdatedAt, thirtyDaysAgo)
+                    .ge(CoupleRelationship::getUpdateTime, thirtyDaysAgo)
             );
             stats.setActiveCouples(activeCouples != null ? activeCouples : 0L);
 
             // 计算平均情侣关系持续天数
             List<CoupleRelationship> couples = coupleMapper.selectList(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .isNotNull(CoupleRelationship::getCreatedAt)
+                    .isNotNull(CoupleRelationship::getCreateTime)
             );
 
             long totalDays = 0;
             long validCouples = 0;
             for (CoupleRelationship couple : couples) {
-                if (couple.getCreatedAt() != null) {
-                    long days = ChronoUnit.DAYS.between(couple.getCreatedAt(), LocalDateTime.now());
+                if (couple.getCreateTime() != null) {
+                    long days = ChronoUnit.DAYS.between(couple.getCreateTime(), LocalDateTime.now());
                     totalDays += days;
                     validCouples++;
                 }
@@ -479,22 +469,20 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .orderByDesc("couple_spins")
                 .last("LIMIT 1");
 
-            Map<String, Object> mostActiveResult = spinRecordMapper.selectMaps(mostActiveCoupleWrapper).get(0);
-            Long mostActiveCoupleSpins = mostActiveResult != null && mostActiveResult.get("couple_spins") != null
-                ? ((BigDecimal) mostActiveResult.get("couple_spins")).longValue()
-                : 0L;
+            Map<String, Object> mostActiveResult = firstMap(spinRecordMapper.selectMaps(mostActiveCoupleWrapper));
+            Long mostActiveCoupleSpins = getLongValue(mostActiveResult, "couple_spins");
             stats.setMostActiveCoupleSpins(mostActiveCoupleSpins);
 
             // 计算7天留存率
             LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
             Long couples7DaysAgo = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getCreatedAt, sevenDaysAgo)
+                    .ge(CoupleRelationship::getCreateTime, sevenDaysAgo)
             );
             Long activeCouples7d = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getCreatedAt, sevenDaysAgo)
-                    .ge(CoupleRelationship::getUpdatedAt, sevenDaysAgo)
+                    .ge(CoupleRelationship::getCreateTime, sevenDaysAgo)
+                    .ge(CoupleRelationship::getUpdateTime, sevenDaysAgo)
             );
             Long retentionRate7d = couples7DaysAgo != null && couples7DaysAgo > 0
                 ? (activeCouples7d != null ? (activeCouples7d * 100 / couples7DaysAgo) : 0L)
@@ -504,12 +492,12 @@ public class StatisticsServiceImpl implements StatisticsService {
             // 计算30天留存率
             Long couples30DaysAgo = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getCreatedAt, thirtyDaysAgo)
+                    .ge(CoupleRelationship::getCreateTime, thirtyDaysAgo)
             );
             Long activeCouples30d = coupleMapper.selectCount(
                 new LambdaQueryWrapper<CoupleRelationship>()
-                    .ge(CoupleRelationship::getCreatedAt, thirtyDaysAgo)
-                    .ge(CoupleRelationship::getUpdatedAt, thirtyDaysAgo)
+                    .ge(CoupleRelationship::getCreateTime, thirtyDaysAgo)
+                    .ge(CoupleRelationship::getUpdateTime, thirtyDaysAgo)
             );
             Long retentionRate30d = couples30DaysAgo != null && couples30DaysAgo > 0
                 ? (activeCouples30d != null ? (activeCouples30d * 100 / couples30DaysAgo) : 0L)
@@ -522,5 +510,37 @@ public class StatisticsServiceImpl implements StatisticsService {
             log.error("获取情侣关系统计失败: error={}", e.getMessage(), e);
             return new CoupleStatistics();
         }
+    }
+
+    private Map<String, Object> firstMap(List<Map<String, Object>> maps) {
+        return maps != null && !maps.isEmpty() ? maps.get(0) : null;
+    }
+
+    private Long getLongValue(Map<String, Object> map, String key) {
+        Number number = getNumber(map, key);
+        return number != null ? number.longValue() : 0L;
+    }
+
+    private Double getDoubleValue(Map<String, Object> map, String key) {
+        Number number = getNumber(map, key);
+        return number != null ? number.doubleValue() : 0.0;
+    }
+
+    private Number getNumber(Map<String, Object> map, String key) {
+        if (map == null) {
+            return null;
+        }
+        Object value = map.get(key);
+        if (value instanceof Number) {
+            return (Number) value;
+        }
+        if (value instanceof String && !((String) value).isBlank()) {
+            try {
+                return new BigDecimal((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

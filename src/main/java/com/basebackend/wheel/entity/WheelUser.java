@@ -1,6 +1,7 @@
 package com.basebackend.wheel.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.basebackend.database.entity.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,15 +17,10 @@ import java.time.LocalDateTime;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("wheel_user")
-public class WheelUser implements Serializable {
+public class WheelUser extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 用户ID - 主键
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 手机号 - 加密存储
@@ -74,27 +70,4 @@ public class WheelUser implements Serializable {
     @TableField("last_login_time")
     private LocalDateTime lastLoginTime;
 
-    /**
-     * 创建时间
-     */
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
-
-    /**
-     * 创建人
-     */
-    @TableField(value = "created_by", fill = FieldFill.INSERT)
-    private Long createdBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(value = "updated_by", fill = FieldFill.INSERT_UPDATE)
-    private Long updatedBy;
 }

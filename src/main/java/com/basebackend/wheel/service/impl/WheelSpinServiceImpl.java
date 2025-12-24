@@ -10,20 +10,26 @@ import com.basebackend.wheel.engine.TimeSensitiveFilter;
 import com.basebackend.wheel.engine.WheelSpinEngine;
 import com.basebackend.wheel.mapper.WheelCategoryMapper;
 import com.basebackend.wheel.mapper.WheelContentMapper;
+import com.basebackend.common.model.PageResult;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.basebackend.wheel.mapper.WheelSpinRecordMapper;
 import com.basebackend.wheel.service.AntiCheatService;
+import com.basebackend.wheel.service.StatisticsService;
 import com.basebackend.wheel.service.WheelSpinService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Random;
+
+import com.basebackend.wheel.util.RequestUtils;
+import com.basebackend.wheel.enums.ClientType;
 
 /**
  * 转盘服务实现
@@ -33,7 +39,6 @@ import java.util.Random;
  */
 @Slf4j
 @Service
-@Transactional
 public class WheelSpinServiceImpl implements WheelSpinService {
 
     @Autowired
@@ -54,44 +59,47 @@ public class WheelSpinServiceImpl implements WheelSpinService {
     @Autowired
     private TimeSensitiveFilter timeFilter;
 
+    @Autowired
+    private StatisticsService statisticsService;
+
     @Value("${wheel.wheel.max-daily-spins:50}")
     private int maxDailySpins;
 
     @Value("${wheel.wheel.min-spin-interval:1000}")
     private long minSpinInterval;
 
-    private Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     @Override
+    @Transactional(readOnly = true)
     public List<WheelCategory> getCategories() {
         return categoryMapper.selectEnabledCategoriesOrderBySort();
     }
 
     @Override
     public List<WheelContent> getContents(List<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            // 查询所有分类的内容
-            List<WheelCategory> categories = getCategories();
-            return categories.stream()
-                    .map(cat -> contentMapper.selectByCategoryIdAndAuditStatus(cat.getId(), 1))
-                    .flatMap(List::stream)
-                    .toList();
-        } else {
-            return categoryIds.stream()
-                    .map(categoryId -> contentMapper.selectByCategoryIdAndAuditStatus(categoryId, 1))
-                    .flatMap(List::stream)
-                    .toList();
+        LambdaQueryWrapper<WheelContent> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WheelContent::getAuditStatus, 1)
+                .eq(WheelContent::getStatus, 1);
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            wrapper.in(WheelContent::getCategoryId, categoryIds);
         }
+        wrapper.orderByDesc(WheelContent::getCreateTime);
+        return contentMapper.selectList(wrapper);
     }
 
     @Override
     public WheelSpinResultDTO spin(Long userId, WheelSpinDTO spinDTO) {
         // 1. 获取客户端信息（IP地址、设备ID）
-        String ipAddress = "127.0.0.1"; // TODO: 从request中获取真实IP
-        String deviceId = "device-" + userId; // TODO: 从request或本地存储获取设备ID
+        String ipAddress = RequestUtils.getClientIp();
+        String deviceId = RequestUtils.getDeviceId();
+        if (deviceId == null || deviceId.isBlank()) {
+            deviceId = "user-" + userId;
+        }
 
         // 2. 防作弊验证
-        AntiCheatService.ValidationResult frequencyResult = antiCheatService.validateSpinFrequency(userId, ipAddress, deviceId);
+        AntiCheatService.ValidationResult frequencyResult = antiCheatService.validateSpinFrequency(userId, ipAddress,
+                deviceId);
         if (!frequencyResult.isValid()) {
             throw new BusinessException(frequencyResult.getMessage());
         }
@@ -112,25 +120,24 @@ public class WheelSpinServiceImpl implements WheelSpinService {
             throw new BusinessException("暂无可用内容");
         }
 
-        // 4. 使用转盘引擎进行权重随机选择
+        // 4. 使用转盘引擎进行权重随机选择（带种子，确保可复现）
         LocalDateTime currentTime = LocalDateTime.now();
-        WheelContent selectedContent = spinEngine.selectByWeight(availableContents, currentTime);
+        long spinSeed = spinEngine.generateSpinSeed(userId, currentTime, spinDTO.getCategoryIds());
+        WheelContent selectedContent = spinEngine.selectByWeight(availableContents, currentTime, spinSeed);
 
         // 5. 调整权重（根据时间敏感规则）
         selectedContent = adjustWeightByTime(selectedContent, currentTime);
 
         // 6. 计算旋转角度
-        double rotationAngle = spinEngine.calculateRotationAngle(selectedContent, availableContents.size(), 0);
+        double rotationAngle = spinEngine.calculateRotationAngle(selectedContent, availableContents, 0);
 
-        // 7. 生成转盘种子（用于结果验证）
-        long spinSeed = spinEngine.generateSpinSeed(userId, currentTime, spinDTO.getCategoryIds());
-
-        // 8. 保存转盘记录
+        // 7. 保存转盘记录
         WheelSpinRecord record = createSpinRecord(userId, selectedContent, spinDTO, ipAddress, deviceId, currentTime);
         spinRecordMapper.insert(record);
 
-        // 9. 验证结果一致性
-        boolean consistent = spinEngine.verifyResultConsistency(spinSeed, selectedContent, availableContents, currentTime);
+        // 8. 验证结果一致性
+        boolean consistent = spinEngine.verifyResultConsistency(spinSeed, selectedContent, availableContents,
+                currentTime);
         if (!consistent) {
             log.warn("转盘结果一致性验证失败: userId={}, contentId={}", userId, selectedContent.getId());
             // 记录异常但不阻止流程
@@ -138,14 +145,15 @@ public class WheelSpinServiceImpl implements WheelSpinService {
                     "contentId=" + selectedContent.getId() + ",seed=" + spinSeed);
         }
 
-        // 10. 构建返回结果
+        // 9. 构建返回结果
         WheelSpinResultDTO result = new WheelSpinResultDTO();
         result.setContentId(selectedContent.getId());
         result.setResultText(selectedContent.getContentText());
         result.setCategoryId(selectedContent.getCategoryId());
         result.setCategoryName(getCategoryName(selectedContent.getCategoryId()));
         result.setRotationAngle(rotationAngle);
-        result.setSpinDuration(spinDTO.getAnimationDuration() != null ? spinDTO.getAnimationDuration().longValue() : 3000L);
+        result.setSpinDuration(
+                spinDTO.getAnimationDuration() != null ? spinDTO.getAnimationDuration().longValue() : 3000L);
         result.setIsWinning(spinEngine.isWinningResult(selectedContent));
 
         // 添加置信度信息
@@ -158,28 +166,39 @@ public class WheelSpinServiceImpl implements WheelSpinService {
     }
 
     @Override
-    public List<WheelSpinRecord> getHistory(Long userId, Integer pageNum, Integer pageSize) {
-        int offset = (pageNum - 1) * pageSize;
-        return spinRecordMapper.selectByUserId(userId, offset, pageSize);
+    @Transactional(readOnly = true)
+    public PageResult<WheelSpinRecord> getHistory(Long userId, Integer pageNum, Integer pageSize) {
+        Page<WheelSpinRecord> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<WheelSpinRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WheelSpinRecord::getUserId, userId);
+        wrapper.orderByDesc(WheelSpinRecord::getSpinTime);
+
+        spinRecordMapper.selectPage(page, wrapper);
+
+        return PageResult.of(page.getRecords(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserStats getStats(Long userId) {
-        // TODO: 实现用户统计查询
+        StatisticsService.UserStatistics userStatistics = statisticsService.getUserStatistics(userId);
         UserStats stats = new UserStats();
-        stats.setTotalSpins(0L);
-        stats.setTodaySpins(0L);
-        stats.setWeekSpins(0L);
-        stats.setMonthSpins(0L);
-        stats.setFavoriteCategory("聊天话题");
-        stats.setAvgSpinDuration(3000L);
+        stats.setTotalSpins(getSafeLong(userStatistics != null ? userStatistics.getTotalSpins() : null));
+        stats.setTodaySpins(getSafeLong(userStatistics != null ? userStatistics.getTodaySpins() : null));
+        stats.setWeekSpins(getSafeLong(userStatistics != null ? userStatistics.getWeekSpins() : null));
+        stats.setMonthSpins(getSafeLong(userStatistics != null ? userStatistics.getMonthSpins() : null));
+        stats.setFavoriteCategory(userStatistics != null ? userStatistics.getFavoriteCategory() : null);
+        stats.setAvgSpinDuration(getSafeLong(userStatistics != null ? userStatistics.getAvgSpinDuration() : null));
         return stats;
     }
 
     @Override
     public boolean validateSpinFrequency(Long userId, String ipAddress) {
-        // 委托给防作弊服务
-        AntiCheatService.ValidationResult result = antiCheatService.validateSpinFrequency(userId, ipAddress, "device-" + userId);
+        String deviceId = RequestUtils.getDeviceId();
+        if (deviceId == null || deviceId.isBlank()) {
+            deviceId = "user-" + userId;
+        }
+        AntiCheatService.ValidationResult result = antiCheatService.validateSpinFrequency(userId, ipAddress, deviceId);
         return result.isValid();
     }
 
@@ -197,7 +216,7 @@ public class WheelSpinServiceImpl implements WheelSpinService {
                 adjusted.setId(content.getId());
                 adjusted.setCategoryId(content.getCategoryId());
                 adjusted.setContentText(content.getContentText());
-                adjusted.setWeight(content.getWeight() * adjustment);
+                adjusted.setWeight(getSafeWeight(content) * adjustment);
                 adjusted.setCreateUserId(content.getCreateUserId());
                 adjusted.setAuditStatus(content.getAuditStatus());
                 adjusted.setTags(content.getTags());
@@ -216,22 +235,31 @@ public class WheelSpinServiceImpl implements WheelSpinService {
         return content;
     }
 
+    private double getSafeWeight(WheelContent content) {
+        return content != null && content.getWeight() != null ? content.getWeight() : 1.0;
+    }
+
+    private long getSafeLong(Long value) {
+        return value != null ? value : 0L;
+    }
+
     /**
      * 创建转盘记录
      */
     private WheelSpinRecord createSpinRecord(Long userId, WheelContent content,
-                                           WheelSpinDTO spinDTO, String ipAddress,
-                                           String deviceId, LocalDateTime spinTime) {
+            WheelSpinDTO spinDTO, String ipAddress,
+            String deviceId, LocalDateTime spinTime) {
         WheelSpinRecord record = new WheelSpinRecord();
         record.setUserId(userId);
         record.setContentId(content.getId());
         record.setResultText(content.getContentText());
         record.setCategoryId(content.getCategoryId());
-        record.setSpinDuration(spinDTO.getAnimationDuration() != null ? spinDTO.getAnimationDuration().longValue() : 3000L);
+        record.setSpinDuration(
+                spinDTO.getAnimationDuration() != null ? spinDTO.getAnimationDuration().longValue() : 3000L);
         record.setSpinTime(spinTime);
         record.setIpAddress(ipAddress);
         record.setDeviceId(deviceId);
-        record.setClientType(1); // 微信小程序
+        record.setClientType(ClientType.WECHAT_MINI.getCode());
         record.setIsAnomaly(0); // 默认正常
         record.setCreateBy(userId);
 

@@ -42,4 +42,9 @@ public interface WheelContentMapper extends BaseMapper<WheelContent> {
      * @return 内容数量
      */
     int countByCreateUserId(@Param("userId") Long userId);
+
+    List<WheelContent> selectByCategoryIdsAndAuditStatus(
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("auditStatus") Integer auditStatus
+    );
 }

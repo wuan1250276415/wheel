@@ -5,7 +5,10 @@ import com.basebackend.wheel.service.AntiCheatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -77,8 +80,7 @@ public class AntiCheatServiceImpl implements AntiCheatService {
             return ValidationResult.success();
         } catch (Exception e) {
             log.error("验证转盘频率失败: userId={}, error={}", userId, e.getMessage(), e);
-            // 出错时允许继续，避免影响用户体验
-            return ValidationResult.success("频率验证异常，已通过");
+            return ValidationResult.fail("系统繁忙，请稍后再试");
         }
     }
 
@@ -115,7 +117,7 @@ public class AntiCheatServiceImpl implements AntiCheatService {
             return ValidationResult.success();
         } catch (Exception e) {
             log.error("验证IP地址失败: userId={}, error={}", userId, e.getMessage(), e);
-            return ValidationResult.success("IP验证异常，已通过");
+            return ValidationResult.fail("系统繁忙，请稍后再试");
         }
     }
 
@@ -152,7 +154,7 @@ public class AntiCheatServiceImpl implements AntiCheatService {
             return ValidationResult.success();
         } catch (Exception e) {
             log.error("检查设备异常失败: userId={}, error={}", userId, e.getMessage(), e);
-            return ValidationResult.success("设备检查异常，已通过");
+            return ValidationResult.fail("系统繁忙，请稍后再试");
         }
     }
 
@@ -188,7 +190,7 @@ public class AntiCheatServiceImpl implements AntiCheatService {
             return ValidationResult.success();
         } catch (Exception e) {
             log.error("验证转盘结果失败: userId={}, error={}", userId, e.getMessage(), e);
-            return ValidationResult.success("结果验证异常，已通过");
+            return ValidationResult.fail("系统繁忙，请稍后再试");
         }
     }
 
@@ -227,8 +229,7 @@ public class AntiCheatServiceImpl implements AntiCheatService {
     private void updateRiskLevel(Long userId) {
         try {
             // 计算异常记录数量
-            var anomalyKeys = redisTemplate.keys(ANOMALY_KEY + userId + ":*");
-            int anomalyCount = anomalyKeys != null ? anomalyKeys.size() : 0;
+            int anomalyCount = countKeys(ANOMALY_KEY + userId + ":*");
 
             int riskLevel = 0;
             if (anomalyCount > 20) {
@@ -247,5 +248,20 @@ public class AntiCheatServiceImpl implements AntiCheatService {
         } catch (Exception e) {
             log.error("更新用户风险等级失败: userId={}, error={}", userId, e.getMessage(), e);
         }
+    }
+
+    private int countKeys(String pattern) {
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
+        Integer count = redisTemplate.execute((RedisCallback<Integer>) connection -> {
+            int total = 0;
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
+                while (cursor.hasNext()) {
+                    cursor.next();
+                    total++;
+                }
+            }
+            return total;
+        });
+        return count != null ? count : 0;
     }
 }

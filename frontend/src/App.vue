@@ -59,7 +59,7 @@ function checkUpdate() {
       icon: 'none'
     })
   })
-  #endif
+  // #endif
 }
 </script>
 

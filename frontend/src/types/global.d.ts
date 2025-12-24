@@ -2,6 +2,15 @@
  * 全局类型定义
  */
 
+// Vite 环境变量类型
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
 // UniApp 扩展类型
 declare module '@dcloudio/uni-app' {
   interface Uni {

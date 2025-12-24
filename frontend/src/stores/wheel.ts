@@ -1,144 +1,100 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as wheelApi from '@/api/wheel'
+import type { WheelCategory, WheelContent, WheelSpinRecord, UserStats } from '@/api/wheel'
 
-export interface WheelContent {
-  id: number
-  contentText: string
-  categoryId: number
-  weight: number
-}
-
-export interface WheelConfig {
-  id: number
-  userId: number
-  radius: number
-  categories: number[]
-  theme: string
-  animationDuration: number
-}
+export type { WheelCategory, WheelContent, WheelSpinRecord, UserStats }
 
 export const useWheelStore = defineStore('wheel', () => {
   // 状态
-  const config = ref<WheelConfig | null>(null)
+  const categories = ref<WheelCategory[]>([])
   const contents = ref<WheelContent[]>([])
+  const selectedCategoryIds = ref<string[]>([])
   const isSpinning = ref(false)
   const lastResult = ref<WheelContent | null>(null)
-  const history = ref<Array<{
-    id: number
-    resultText: string
-    spinTime: string
-    categoryName: string
-  }>>([])
+  const history = ref<WheelSpinRecord[]>([])
+  const stats = ref<UserStats | null>(null)
+  const historyTotal = ref(0)
 
   // 计算属性
   const availableCategories = computed(() => {
-    const categoryMap = new Map<number, string>()
-    contents.value.forEach(content => {
-      if (!categoryMap.has(content.categoryId)) {
-        categoryMap.set(content.categoryId, `分类${content.categoryId}`)
-      }
-    })
-    return Array.from(categoryMap.entries()).map(([id, name]) => ({
-      id,
-      name
-    }))
+    return categories.value.sort((a, b) => a.sortOrder - b.sortOrder)
   })
 
   const totalWeight = computed(() => {
     return contents.value.reduce((sum, content) => sum + content.weight, 0)
   })
 
-  // 获取转盘配置
-  async function fetchConfig() {
-    try {
-      const res = await wheelApi.getWheelConfig()
+  const hasMoreHistory = computed(() => {
+    return history.value.length < historyTotal.value
+  })
 
-      if (res.code === 200) {
-        config.value = res.data
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
+  // 获取转盘分类
+  async function fetchCategories() {
+    try {
+      const data = await wheelApi.getCategories()
+      categories.value = data
+      return { success: true, data }
     } catch (error: any) {
       return { success: false, message: error.message }
     }
   }
 
-  // 保存转盘配置
-  async function saveConfig(data: {
-    radius?: number
-    categories?: number[]
-    theme?: string
-    animationDuration?: number
-  }) {
+  /**
+   * 获取转盘内容
+   * @param categoryIds 分类ID数组，必传
+   */
+  async function fetchContents(categoryIds: string[]) {
     try {
-      const res = await wheelApi.saveWheelConfig(data)
-
-      if (res.code === 200) {
-        // 重新获取配置
-        await fetchConfig()
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
-    } catch (error: any) {
-      return { success: false, message: error.message }
-    }
-  }
-
-  // 获取转盘内容
-  async function fetchContents(categoryId?: number) {
-    try {
-      const res = await wheelApi.getWheelContents(categoryId)
-
-      if (res.code === 200) {
-        contents.value = res.data
-        return { success: true }
-      } else {
-        return { success: false, message: res.message }
-      }
+      selectedCategoryIds.value = categoryIds
+      const data = await wheelApi.getContents(categoryIds)
+      contents.value = data
+      return { success: true, data }
     } catch (error: any) {
       return { success: false, message: error.message }
     }
   }
 
   // 执行转盘
-  async function spin(categoryIds?: number[]) {
+  async function spin(categoryIds?: string[], config?: { radius?: number; animationDuration?: number }) {
     if (isSpinning.value) {
       return { success: false, message: '转盘正在运行中' }
     }
 
     try {
       isSpinning.value = true
-      const res = await wheelApi.spinWheel({ categoryIds })
+      const data = await wheelApi.spin({
+        categoryIds,
+        radius: config?.radius,
+        animationDuration: config?.animationDuration
+      })
 
-      if (res.code === 200) {
-        lastResult.value = res.data.result
-
-        // 将新记录添加到历史记录开头
-        history.value.unshift({
-          id: res.data.recordId,
-          resultText: res.data.result.contentText,
-          spinTime: new Date().toISOString(),
-          categoryName: `分类${res.data.result.categoryId}`
-        })
-
-        // 限制历史记录数量
-        if (history.value.length > 50) {
-          history.value = history.value.slice(0, 50)
+      // 1. 根据返回的 contentId 在本地 stores 中找到完整的 WheelContent 对象
+      // 因为前端 WheelCanvas 需要 width/color/etc (虽然目前只用了 text/weight, 但保持对象完整性更好)
+      // 如果找不到(理论不应发生), 则构造一个临时对象
+      let targetContent = contents.value.find(c => c.id === data.contentId)
+      if (!targetContent) {
+        targetContent = {
+          id: data.contentId,
+          categoryId: data.categoryId.toString(),
+          contentText: data.resultText,
+          weight: 1,
+          status: 1,
+          isSystem: false
         }
+      }
 
-        return {
-          success: true,
-          data: {
-            result: res.data.result,
-            angle: res.data.angle,
-            duration: res.data.duration
-          }
+      lastResult.value = targetContent
+
+      // 注意：历史记录通过接口 fetchHistory 获取，不在此处本地添加
+
+      return {
+        success: true,
+        data: {
+          content: targetContent,
+          angle: data.rotationAngle,
+          duration: data.spinDuration
         }
-      } else {
-        return { success: false, message: res.message }
       }
     } catch (error: any) {
       return { success: false, message: error.message }
@@ -147,29 +103,37 @@ export const useWheelStore = defineStore('wheel', () => {
     }
   }
 
-  // 获取历史记录
-  async function fetchHistory(page = 1, pageSize = 20) {
+  // 获取历史记录（使用pageNum/pageSize）
+  async function fetchHistory(pageNum: number = 1, pageSize: number = 20) {
     try {
-      const res = await wheelApi.getSpinHistory({ page, pageSize })
+      const data = await wheelApi.getHistory(pageNum, pageSize)
 
-      if (res.code === 200) {
-        if (page === 1) {
-          history.value = res.data.list
-        } else {
-          history.value.push(...res.data.list)
-        }
-
-        return {
-          success: true,
-          data: {
-            list: res.data.list,
-            total: res.data.total,
-            hasMore: history.value.length < res.data.total
-          }
-        }
+      if (pageNum === 1) {
+        history.value = data.records
       } else {
-        return { success: false, message: res.message }
+        history.value.push(...data.records)
       }
+      historyTotal.value = data.total
+
+      return {
+        success: true,
+        data: {
+          list: data.records,
+          total: data.total,
+          hasMore: history.value.length < data.total
+        }
+      }
+    } catch (error: any) {
+      return { success: false, message: error.message }
+    }
+  }
+
+  // 获取用户统计
+  async function fetchStats() {
+    try {
+      const data = await wheelApi.getStats()
+      stats.value = data
+      return { success: true, data }
     } catch (error: any) {
       return { success: false, message: error.message }
     }
@@ -182,18 +146,25 @@ export const useWheelStore = defineStore('wheel', () => {
   }
 
   return {
-    config,
+    // 状态
+    categories,
     contents,
+    selectedCategoryIds,
     isSpinning,
     lastResult,
     history,
+    stats,
+    historyTotal,
+    // 计算属性
     availableCategories,
     totalWeight,
-    fetchConfig,
-    saveConfig,
+    hasMoreHistory,
+    // 方法
+    fetchCategories,
     fetchContents,
     spin,
     fetchHistory,
+    fetchStats,
     reset
   }
 })

@@ -1,9 +1,12 @@
 package com.basebackend.wheel.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.basebackend.database.entity.BaseEntity;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -16,15 +19,10 @@ import java.time.LocalDateTime;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("couple_relationship")
-public class CoupleRelationship implements Serializable {
+public class CoupleRelationship extends BaseEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 关系ID - 主键
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 用户ID - 发起方
@@ -61,28 +59,4 @@ public class CoupleRelationship implements Serializable {
      */
     @TableField("unbound_at")
     private LocalDateTime unboundAt;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
-
-    /**
-     * 创建人
-     */
-    @TableField(value = "created_by", fill = FieldFill.INSERT)
-    private Long createdBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(value = "updated_by", fill = FieldFill.INSERT_UPDATE)
-    private Long updatedBy;
 }

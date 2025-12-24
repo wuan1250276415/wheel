@@ -4,30 +4,32 @@
     <view class="category-selector">
       <scroll-view class="category-list" scroll-x>
         <view
-          class="category-item"
-          :class="{ active: !selectedCategoryId }"
-          @click="selectCategory(null)"
-        >
-          <text>全部</text>
-        </view>
-
-        <view
           v-for="category in categories"
           :key="category.id"
           class="category-item"
-          :class="{ active: selectedCategoryId === category.id }"
-          @click="selectCategory(category.id)"
+          :class="{ active: selectedCategoryIds.includes(category.id) }"
+          :style="{ borderColor: selectedCategoryIds.includes(category.id) ? category.themeColor : 'transparent' }"
+          @click="toggleCategory(category.id)"
         >
-          <text>{{ category.name }}</text>
+          <text>{{ category.categoryName }}</text>
         </view>
       </scroll-view>
+      
+      <view class="category-actions">
+        <button class="select-all-btn" @click="selectAllCategories">全选</button>
+        <button class="confirm-btn" @click="confirmSelection" :disabled="selectedCategoryIds.length === 0">
+          确认选择 ({{ selectedCategoryIds.length }})
+        </button>
+      </view>
     </view>
 
     <!-- 转盘区域 -->
-    <view class="wheel-section">
+    <view class="wheel-section" v-if="wheelStore.contents.length > 0">
       <WheelCanvas
+        :key="wheelKey"
+        ref="wheelCanvasRef"
         :size="350"
-        :contents="filteredContents"
+        :contents="wheelStore.contents"
         :isSpinning="wheelStore.isSpinning"
         @spin="handleSpin"
         @result="handleResult"
@@ -71,6 +73,11 @@
       </button>
     </view>
 
+    <!-- 未选择分类提示 -->
+    <view class="empty-tip" v-else>
+      <text>请选择分类后点击"确认选择"加载转盘内容</text>
+    </view>
+
     <!-- 历史记录 -->
     <view class="history-section" v-if="wheelStore.history.length > 0">
       <view class="section-title">
@@ -85,7 +92,7 @@
         >
           <view class="history-content">
             <text class="history-text">{{ item.resultText }}</text>
-            <text class="history-category">{{ item.categoryName }}</text>
+            <text class="history-category">{{ getCategoryName(item.categoryId) }}</text>
           </view>
           <text class="history-time">{{ formatTime(item.spinTime) }}</text>
         </view>
@@ -95,68 +102,107 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useWheelStore } from '@/stores/wheel'
 import WheelCanvas from '@/components/WheelCanvas.vue'
 
 const wheelStore = useWheelStore()
 
 const showConfig = ref(false)
-const selectedCategoryId = ref<number | null>(null)
+const selectedCategoryIds = ref<string[]>([])
 const config = ref({
   radius: 175,
   animationDuration: 3000
 })
 
+// 使用 key 强制组件重新创建，确保内容更新时 Canvas 重新渲染
+const wheelKey = ref(0)
+
 // 计算属性
 const categories = computed(() => wheelStore.availableCategories)
-
-const filteredContents = computed(() => {
-  if (!selectedCategoryId.value) {
-    return wheelStore.contents
-  }
-  return wheelStore.contents.filter(
-    item => item.categoryId === selectedCategoryId.value
-  )
-})
 
 // 页面加载
 onMounted(async () => {
   await loadData()
 })
 
+// 监听 contents 变化，强制重新渲染 WheelCanvas
+watch(
+  () => wheelStore.contents.length,
+  () => {
+    // 当内容数量变化时，强制重新渲染组件
+    wheelKey.value++
+  }
+)
+
 // 加载数据
 async function loadData() {
-  // 获取转盘配置
-  await wheelStore.fetchConfig()
-
-  // 获取转盘内容
-  await wheelStore.fetchContents()
+  // 获取分类列表
+  await wheelStore.fetchCategories()
 
   // 获取历史记录
   await wheelStore.fetchHistory()
+}
 
-  // 更新本地配置
-  if (wheelStore.config) {
-    config.value = {
-      radius: wheelStore.config.radius,
-      animationDuration: wheelStore.config.animationDuration
-    }
+// 切换分类选择
+function toggleCategory(categoryId: string) {
+  const index = selectedCategoryIds.value.indexOf(categoryId)
+  if (index > -1) {
+    selectedCategoryIds.value.splice(index, 1)
+  } else {
+    selectedCategoryIds.value.push(categoryId)
   }
 }
 
-// 选择分类
-function selectCategory(categoryId: number | null) {
-  selectedCategoryId.value = categoryId
+// 全选分类
+function selectAllCategories() {
+  if (selectedCategoryIds.value.length === categories.value.length) {
+    selectedCategoryIds.value = []
+  } else {
+    selectedCategoryIds.value = categories.value.map(c => c.id)
+  }
+}
+
+// 确认选择，加载转盘内容
+async function confirmSelection() {
+  if (selectedCategoryIds.value.length === 0) {
+    uni.showToast({
+      title: '请至少选择一个分类',
+      icon: 'none'
+    })
+    return
+  }
+  
+  const res = await wheelStore.fetchContents(selectedCategoryIds.value)
+  if (!res.success) {
+    uni.showToast({
+      title: res.message || '加载内容失败',
+      icon: 'none'
+    })
+  }
 }
 
 // 处理转盘开始
-async function handleSpin() {
-  const res = await wheelStore.spin(
-    selectedCategoryId.value ? [selectedCategoryId.value] : undefined
-  )
+const wheelCanvasRef = ref()
 
-  if (!res.success) {
+async function handleSpin() {
+  const res = await wheelStore.spin(selectedCategoryIds.value, {
+    animationDuration: config.value.animationDuration,
+    radius: config.value.radius
+  })
+
+  if (res.success && res.data) {
+    // 后端 rotationAngle 计算假设转盘从 0° 开始绘制
+    // 但前端 Canvas 从 -90° 开始绘制
+    // 需要补偿 90° 的坐标系差异
+    const adjustedAngle = res.data.angle - 90
+
+    wheelCanvasRef.value?.playAnimation({
+      content: res.data.content,
+      rotationAngle: adjustedAngle,
+      spinDuration: Number(res.data.duration) || config.value.animationDuration
+    })
+  } else {
     uni.showToast({
       title: res.message || '转盘失败',
       icon: 'none'
@@ -164,14 +210,12 @@ async function handleSpin() {
   }
 }
 
-// 处理转盘结果
-function handleResult(result: any) {
-  uni.showToast({
-    title: `结果：${result.contentText}`,
-    icon: 'success'
-  })
+// 处理转盘结果 - 动画完成后调用接口获取历史记录
+async function handleResult(result: any) {
+  // 调用接口获取最新的历史记录
+  await wheelStore.fetchHistory(1, 20)
 
-  // 播放成功音效
+  // 显示结果弹窗（由 WheelCanvas 组件处理）
   playSuccessSound()
 }
 
@@ -192,21 +236,12 @@ function updateAnimationDuration(e: any) {
   config.value.animationDuration = e.detail.value
 }
 
-// 保存配置
-async function saveConfig() {
-  const res = await wheelStore.saveConfig(config.value)
-
-  if (res.success) {
-    uni.showToast({
-      title: '配置已保存',
-      icon: 'success'
-    })
-  } else {
-    uni.showToast({
-      title: res.message || '保存失败',
-      icon: 'none'
-    })
-  }
+// 保存配置（本地保存）
+function saveConfig() {
+  uni.showToast({
+    title: '配置已保存',
+    icon: 'success'
+  })
 }
 
 // 格式化时间
@@ -225,6 +260,12 @@ function formatTime(timeStr: string) {
     return date.toLocaleDateString()
   }
 }
+
+// 获取分类名称
+function getCategoryName(categoryId: string) {
+  const category = categories.value.find(c => c.id === categoryId)
+  return category ? category.categoryName : '未知分类'
+}
 </script>
 
 <style scoped>
@@ -240,6 +281,7 @@ function formatTime(timeStr: string) {
 
 .category-list {
   white-space: nowrap;
+  margin-bottom: 20rpx;
 }
 
 .category-item {
@@ -257,6 +299,46 @@ function formatTime(timeStr: string) {
 .category-item.active {
   background: linear-gradient(135deg, #FF69B4, #FF1493);
   color: #fff;
+}
+
+.category-actions {
+  display: flex;
+  gap: 20rpx;
+  padding: 0 10rpx;
+}
+
+.select-all-btn {
+  flex: 1;
+  height: 70rpx;
+  background: #fff;
+  color: #FF69B4;
+  border: 2rpx solid #FF69B4;
+  border-radius: 35rpx;
+  font-size: 28rpx;
+}
+
+.confirm-btn {
+  flex: 2;
+  height: 70rpx;
+  background: linear-gradient(135deg, #FF69B4, #FF1493);
+  color: #fff;
+  border: none;
+  border-radius: 35rpx;
+  font-size: 28rpx;
+}
+
+.confirm-btn[disabled] {
+  background: #ccc;
+  color: #999;
+}
+
+.empty-tip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400rpx;
+  color: #999;
+  font-size: 28rpx;
 }
 
 .wheel-section {

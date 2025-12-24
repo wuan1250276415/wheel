@@ -10,25 +10,26 @@
     "build:mp-weixin": "uni build -p mp-weixin"
   },
   "dependencies": {
-    "@dcloudio/uni-app": "3.0.0-3080420231230001",
-    "@dcloudio/uni-app-plus": "3.0.0-3080420231230001",
-    "@dcloudio/uni-components": "3.0.0-3080420231230001",
-    "@dcloudio/uni-icons": "^2.0.2",
-    "@dcloudio/uni-ui": "^1.4.27",
+    "@dcloudio/uni-app": "3.0.0-4020920240930001",
+    "@dcloudio/uni-app-plus": "3.0.0-4020920240930001",
+    "@dcloudio/uni-components": "3.0.0-4020920240930001",
+    "@dcloudio/uni-h5": "3.0.0-4020920240930001",
+    "@iconscout/unicons": "^4.2.0",
+    "@dcloudio/uni-ui": "^1.4.28",
     "pinia": "^2.1.7",
-    "vue": "^3.3.4",
+    "vue": "3.4.21",
     "vue-i18n": "^9.5.0"
   },
   "devDependencies": {
     "@dcloudio/types": "^3.4.0",
-    "@dcloudio/uni-automator": "3.0.0-3080420231230001",
-    "@dcloudio/uni-cli": "3.0.0-3080420231230001",
-    "@dcloudio/uni-cli-shared": "3.0.0-3080420231230001",
-    "@dcloudio/uni-stacktracey": "3.0.0-3080420231230001",
-    "@dcloudio/uni-stat": "3.0.0-3080420231230001",
+    "@dcloudio/uni-automator": "3.0.0-4020920240930001",
+    "@dcloudio/uni-cli-shared": "3.0.0-4020920240930001",
+    "@dcloudio/uni-stacktracey": "3.0.0-4020920240930001",
+    "@dcloudio/uni-stat": "3.0.0-4020920240930001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4020920240930001",
     "sass": "^1.69.5",
     "typescript": "^5.3.2",
-    "vite": "^5.0.5",
+    "vite": "5.2.8",
     "vue-tsc": "^1.8.22"
   },
   "uni-app": {

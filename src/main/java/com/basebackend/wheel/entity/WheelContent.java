@@ -91,22 +91,4 @@ public class WheelContent extends BaseEntity implements Serializable {
     @TableField(value = "`status`")
     private int status;
 
-    /**
-     * 创建时间
-     */
-    @TableField(value = "created_time")
-    @NotNull(message = "创建时间不能为null")
-    private Date createdTime;
-
-    /**
-     * 创建人
-     */
-    @TableField(value = "created_by")
-    private Long createdBy;
-
-    /**
-     * 更新人
-     */
-    @TableField(value = "updated_by")
-    private Long updatedBy;
 }

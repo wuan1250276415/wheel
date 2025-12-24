@@ -14,10 +14,10 @@ spring:
 server:
   port: 8180
 
-# JWT配置
+# JWT配置 (JWT_SECRET 环境变量必须配置，无默认值)
 wheel:
   jwt:
-    secret: ${JWT_SECRET:mySecretKeyForWheelApi2025MustBeVeryLongToEnsureSecurityAndBeAtLeast512BitsLong}
+    secret: ${JWT_SECRET:}
     access-token-validity-in-seconds: 1800
     refresh-token-validity-in-seconds: 604800
 
@@ -26,42 +26,3 @@ wheel:
     max-daily-spins: 50
     min-spin-interval: 1000
 
-# MyBatis-Plus配置
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-    call-setters-on-nulls: true
-    jdbc-type-for-null: 'null'
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: ASSIGN_ID
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-      insert-strategy: NOT_NULL
-      update-strategy: NOT_NULL
-      select-strategy: NOT_EMPTY
-  mapper-locations: classpath*:/mapper/**/*.xml
-
-# Knife4j (Swagger) 配置
-knife4j:
-  enable: true
-  setting:
-    language: zh-CN
-  basic:
-    enable: false
-
-# Logging Statistics Configuration
-logging:
-  statistics:
-    enabled: true
-    cache-size: 100
-    cache-ttl: 1m
-    realtime-window: 1m
-    historical-window: 5m
-    max-window: 10m
-  level:
-    com.basebackend.wheel: DEBUG
-    org.springframework.security: DEBUG

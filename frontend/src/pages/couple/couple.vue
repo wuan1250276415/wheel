@@ -4,19 +4,21 @@
     <view v-if="coupleInfo" class="couple-card">
       <view class="couple-avatar">
         <image
-          :src="coupleInfo.partnerInfo.avatar"
+          v-if="coupleInfo.partnerAvatar"
+          :src="coupleInfo.partnerAvatar"
           class="avatar"
           mode="aspectFill"
         />
-        <view class="avatar-placeholder" v-if="!coupleInfo.partnerInfo.avatar">
-          <text>{{ coupleInfo.partnerInfo.nickname[0] }}</text>
+        <view class="avatar-placeholder" v-else>
+          <text>{{ coupleInfo.partnerNickname?.[0] || '伴' }}</text>
         </view>
       </view>
 
       <view class="couple-info">
-        <text class="couple-name">{{ coupleInfo.partnerInfo.nickname }}</text>
+        <text class="couple-name">{{ coupleInfo.partnerNickname }}</text>
         <text class="couple-status">已配对</text>
         <text class="couple-date">配对日期：{{ formatDate(coupleInfo.createdAt) }}</text>
+        <text class="couple-spins">共同转盘：{{ coupleInfo.totalSpins || 0 }}次</text>
       </view>
 
       <button class="break-btn" @click="showBreakConfirm">解除关系</button>
@@ -24,14 +26,28 @@
 
     <!-- 邀请情侣 -->
     <view v-else class="invite-section">
+      <!-- 通过手机号邀请 -->
       <view class="invite-card">
         <view class="invite-icon"></view>
         <text class="invite-title">邀请你的另一半</text>
-        <text class="invite-desc">建立情侣关系，一起享受甜蜜时光</text>
+        <text class="invite-desc">输入对方手机号发送邀请</text>
 
-        <button class="create-invite-btn" @click="createInviteCode">
-          创建邀请码
-        </button>
+        <view class="phone-input-group">
+          <input
+            v-model="partnerPhone"
+            class="phone-input"
+            type="number"
+            placeholder="请输入对方手机号"
+            maxlength="11"
+          />
+          <button 
+            class="invite-btn" 
+            @click="sendInvite" 
+            :disabled="!isValidPhone || isInviting"
+          >
+            {{ isInviting ? '发送中...' : '发送邀请' }}
+          </button>
+        </view>
       </view>
 
       <!-- 邀请码输入 -->
@@ -43,11 +59,19 @@
             class="code-input"
             placeholder="请输入邀请码"
             maxlength="8"
+            @blur="validateCode"
           />
-          <button class="accept-btn" @click="acceptInvite" :disabled="!inviteCode">
-            接受邀请
+          <button 
+            class="accept-btn" 
+            @click="handleAcceptInvite" 
+            :disabled="!inviteCode || isAccepting || !isCodeValid"
+          >
+            {{ isAccepting ? '接受中...' : '接受邀请' }}
           </button>
         </view>
+        <text v-if="codeValidationMsg" class="validation-msg" :class="{ error: !isCodeValid }">
+          {{ codeValidationMsg }}
+        </text>
       </view>
     </view>
 
@@ -100,14 +124,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import * as coupleApi from '@/api/couple'
 
-const coupleInfo = ref<any>(null)
+const coupleInfo = ref<coupleApi.CoupleInfo | null>(null)
 const inviteCode = ref('')
+const partnerPhone = ref('')
 const inviteData = ref<any>({})
 const showInvitePopup = ref(false)
 const coupleSpinHistory = ref<any[]>([])
+
+// 加载状态
+const isInviting = ref(false)
+const isAccepting = ref(false)
+
+// 邀请码验证状态
+const isCodeValid = ref(true)
+const codeValidationMsg = ref('')
+const validationTimer = ref<any>(null)
+
+// 计算属性：验证手机号格式
+const isValidPhone = computed(() => {
+  return /^1[3-9]\d{9}$/.test(partnerPhone.value)
+})
 
 // 页面加载
 onMounted(() => {
@@ -119,7 +158,7 @@ async function loadCoupleInfo() {
   try {
     const res = await coupleApi.getCoupleInfo()
 
-    if (res.code === 200) {
+    if (res.code === 200 && res.data) {
       coupleInfo.value = res.data
 
       // 如果已配对，加载情侣转盘记录
@@ -132,31 +171,86 @@ async function loadCoupleInfo() {
   }
 }
 
-// 创建邀请码
-async function createInviteCode() {
-  try {
-    const res = await coupleApi.createInviteCode()
+// 通过手机号发送邀请
+async function sendInvite() {
+  if (!isValidPhone.value) {
+    uni.showToast({
+      title: '请输入正确的手机号',
+      icon: 'none'
+    })
+    return
+  }
 
-    if (res.code === 200) {
+  isInviting.value = true
+
+  try {
+    const res = await coupleApi.inviteCouple({
+      partnerPhoneNumber: partnerPhone.value
+    })
+
+    if (res.code === 200 && res.data) {
       inviteData.value = res.data
       showInvitePopup.value = true
+      
+      uni.showToast({
+        title: '邀请已发送',
+        icon: 'success'
+      })
     } else {
       uni.showToast({
-        title: res.message || '创建失败',
+        title: res.message || '邀请发送失败',
         icon: 'none'
       })
     }
   } catch (error: any) {
     uni.showToast({
-      title: error.message || '创建失败',
+      title: error.message || '邀请发送失败',
       icon: 'none'
     })
+  } finally {
+    isInviting.value = false
   }
 }
 
+// 验证邀请码
+async function validateCode() {
+  const code = inviteCode.value.trim()
+  
+  if (!code) {
+    isCodeValid.value = true
+    codeValidationMsg.value = ''
+    return
+  }
+
+  // 清除之前的定时器
+  if (validationTimer.value) {
+    clearTimeout(validationTimer.value)
+  }
+
+  // 延迟验证，避免频繁请求
+  validationTimer.value = setTimeout(async () => {
+    try {
+      const res = await coupleApi.validateInviteCode(code)
+      
+      if (res.code === 200) {
+        isCodeValid.value = res.data === true
+        codeValidationMsg.value = res.data ? '邀请码有效' : '邀请码无效或已过期'
+      } else {
+        isCodeValid.value = false
+        codeValidationMsg.value = res.message || '验证失败'
+      }
+    } catch (error: any) {
+      isCodeValid.value = false
+      codeValidationMsg.value = error.message || '验证失败'
+    }
+  }, 500)
+}
+
 // 接受邀请
-async function acceptInvite() {
-  if (!inviteCode.value.trim()) {
+async function handleAcceptInvite() {
+  const code = inviteCode.value.trim()
+  
+  if (!code) {
     uni.showToast({
       title: '请输入邀请码',
       icon: 'none'
@@ -164,10 +258,10 @@ async function acceptInvite() {
     return
   }
 
+  isAccepting.value = true
+
   try {
-    const res = await coupleApi.acceptInvite({
-      inviteCode: inviteCode.value.trim()
-    })
+    const res = await coupleApi.acceptInvite(code)
 
     if (res.code === 200) {
       uni.showToast({
@@ -180,6 +274,7 @@ async function acceptInvite() {
 
       // 清空输入
       inviteCode.value = ''
+      codeValidationMsg.value = ''
     } else {
       uni.showToast({
         title: res.message || '配对失败',
@@ -191,6 +286,8 @@ async function acceptInvite() {
       title: error.message || '配对失败',
       icon: 'none'
     })
+  } finally {
+    isAccepting.value = false
   }
 }
 
@@ -223,7 +320,7 @@ function showBreakConfirm() {
 // 解除关系
 async function breakCouple() {
   try {
-    const res = await coupleApi.breakCouple()
+    const res = await coupleApi.unbindCouple()
 
     if (res.code === 200) {
       uni.showToast({
@@ -253,8 +350,8 @@ async function loadCoupleSpinHistory() {
   try {
     const res = await coupleApi.getCoupleSpinHistory({ page: 1, pageSize: 20 })
 
-    if (res.code === 200) {
-      coupleSpinHistory.value = res.data.list
+    if (res.code === 200 && res.data) {
+      coupleSpinHistory.value = res.data.list || []
     }
   } catch (error) {
     console.error('获取情侣转盘记录失败:', error)
@@ -416,6 +513,57 @@ function formatTime(timeStr: string) {
   font-size: 30rpx;
   font-weight: bold;
   box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
+}
+
+.phone-input-group {
+  width: 100%;
+  display: flex;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.phone-input {
+  flex: 1;
+  height: 80rpx;
+  padding: 0 30rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  color: #333;
+}
+
+.invite-btn {
+  width: 200rpx;
+  height: 80rpx;
+  background: #fff;
+  color: #FF1493;
+  border: none;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.invite-btn:disabled {
+  opacity: 0.6;
+}
+
+.validation-msg {
+  display: block;
+  font-size: 24rpx;
+  color: #32CD32;
+  margin-top: 15rpx;
+  padding-left: 20rpx;
+}
+
+.validation-msg.error {
+  color: #DC143C;
+}
+
+.couple-spins {
+  display: block;
+  font-size: 24rpx;
+  color: #FF69B4;
+  margin-top: 5rpx;
 }
 
 .input-section {

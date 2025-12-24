@@ -89,6 +89,7 @@ import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useWheelStore } from '@/stores/wheel'
 import * as statisticsApi from '@/api/statistics'
+import * as coupleApi from '@/api/couple'
 
 const userStore = useUserStore()
 const wheelStore = useWheelStore()
@@ -97,40 +98,60 @@ const userInfo = ref(userStore.userInfo)
 const coupleInfo = ref<any>(null)
 const todayStats = ref<any>({})
 const recentResults = ref<any[]>([])
+const isLoading = ref(false)
 
 // 页面加载
 onMounted(() => {
+  // 初始化用户Store
+  userStore.init()
   // 初始化用户数据
   initData()
 })
 
+// 检查登录状态并跳转
+function checkLoginAndRedirect(): boolean {
+  if (!userStore.isLoggedIn) {
+    uni.redirectTo({
+      url: '/pages/login/login'
+    })
+    return false
+  }
+  return true
+}
+
 // 初始化数据
 async function initData() {
-  // 检查登录状态
-  if (!userStore.isLoggedIn) {
-    // 跳转到登录页
-    uni.showModal({
-      title: '提示',
-      content: '请先登录',
-      showCancel: false,
-      success: () => {
-        // 这里应该跳转到登录页
-        console.log('跳转到登录页')
-      }
-    })
+  // 检查登录状态，未登录则跳转到登录页
+  if (!checkLoginAndRedirect()) {
     return
   }
 
+  // 更新用户信息引用
+  userInfo.value = userStore.userInfo
+
+  isLoading.value = true
+
   try {
-    // 获取用户统计
-    const statsRes = await statisticsApi.getUserStatistics()
-    if (statsRes.code === 200) {
+    // 并行获取数据
+    const [statsResult, coupleResult] = await Promise.allSettled([
+      statisticsApi.getUserStatistics(),
+      coupleApi.getCoupleInfo()
+    ])
+
+    // 处理用户统计
+    if (statsResult.status === 'fulfilled' && statsResult.value.code === 200) {
+      const statsData = statsResult.value.data
       todayStats.value = {
-        spins: statsRes.data.todaySpins,
-        duration: Math.round(statsRes.data.avgSpinDuration / 1000 / 60),
-        coupleSpins: statsRes.data.totalCoupleSpins,
-        consecutiveDays: statsRes.data.consecutiveDays
+        spins: statsData?.todaySpins || 0,
+        duration: statsData?.avgSpinDuration ? Math.round(statsData.avgSpinDuration / 1000 / 60) : 0,
+        coupleSpins: statsData?.totalCoupleSpins || 0,
+        consecutiveDays: statsData?.consecutiveDays || 0
       }
+    }
+
+    // 处理情侣信息
+    if (coupleResult.status === 'fulfilled' && coupleResult.value.code === 200) {
+      coupleInfo.value = coupleResult.value.data
     }
 
     // 获取最近的历史记录
@@ -139,6 +160,12 @@ async function initData() {
 
   } catch (error) {
     console.error('初始化数据失败:', error)
+    uni.showToast({
+      title: '数据加载失败',
+      icon: 'none'
+    })
+  } finally {
+    isLoading.value = false
   }
 }
 

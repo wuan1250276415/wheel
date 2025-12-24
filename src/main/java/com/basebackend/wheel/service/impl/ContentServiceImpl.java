@@ -10,6 +10,8 @@ import com.basebackend.wheel.mapper.ContentReportMapper;
 import com.basebackend.wheel.mapper.WheelContentMapper;
 import com.basebackend.wheel.service.ContentService;
 import com.basebackend.wheel.util.AuditHelper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -235,15 +237,62 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public AuditStatus getAuditStatus(Long contentId) {
-        // 查找审核日志
-        // TODO: 从auditLogMapper查询审核状态
-        return null;
+        WheelContent content = contentMapper.selectById(contentId);
+        if (content == null) {
+            throw new BusinessException("内容不存在");
+        }
+
+        AuditStatus status = new AuditStatus();
+        status.setStatus(content.getAuditStatus());
+        status.setStatusText(toStatusText(content.getAuditStatus()));
+
+        ContentAuditLog latestLog = auditLogMapper.selectOne(
+                new LambdaQueryWrapper<ContentAuditLog>()
+                        .eq(ContentAuditLog::getContentId, contentId)
+                        .orderByDesc(ContentAuditLog::getCreatedAt)
+                        .last("LIMIT 1"));
+
+        if (latestLog != null) {
+            Integer auditStatus = latestLog.getAuditStatus();
+            if (auditStatus != null) {
+                status.setStatus(auditStatus);
+                status.setStatusText(toStatusText(auditStatus));
+            }
+            status.setAuditComment(latestLog.getAuditComment());
+            if (latestLog.getAuditorId() != null) {
+                status.setAuditor(String.valueOf(latestLog.getAuditorId()));
+            }
+            LocalDateTime auditedAt = latestLog.getAuditedAt() != null
+                    ? latestLog.getAuditedAt()
+                    : latestLog.getCreatedAt();
+            if (auditedAt != null) {
+                status.setAuditedAt(auditedAt.toString());
+            }
+        }
+
+        return status;
     }
 
     @Override
     public List<WheelContent> searchContents(String keyword, Long categoryId, Integer pageNum, Integer pageSize) {
-        // TODO: 实现内容搜索
-        return List.of();
+        int pageIndex = pageNum != null && pageNum > 0 ? pageNum : 1;
+        int size = pageSize != null && pageSize > 0 ? pageSize : 20;
+
+        LambdaQueryWrapper<WheelContent> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WheelContent::getAuditStatus, 1)
+                .eq(WheelContent::getStatus, 1);
+
+        if (StringUtils.hasText(keyword)) {
+            wrapper.like(WheelContent::getContentText, keyword);
+        }
+        if (categoryId != null) {
+            wrapper.eq(WheelContent::getCategoryId, categoryId);
+        }
+
+        wrapper.orderByDesc(WheelContent::getCreateTime);
+        Page<WheelContent> page = new Page<>(pageIndex, size);
+        contentMapper.selectPage(page, wrapper);
+        return page.getRecords();
     }
 
     /**
@@ -275,6 +324,18 @@ public class ContentServiceImpl implements ContentService {
             log.warn("AI审核结果转换JSON失败: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String toStatusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        return switch (status) {
+            case 0 -> "待审核";
+            case 1 -> "已通过";
+            case 2 -> "已拒绝";
+            default -> "未知";
+        };
     }
 
     /**
