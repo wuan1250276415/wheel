@@ -8,6 +8,10 @@ import com.basebackend.wheel.mapper.CoupleRelationshipMapper;
 import com.basebackend.wheel.mapper.WheelUserMapper;
 import com.basebackend.wheel.service.CoupleService;
 import com.basebackend.wheel.util.AuditHelper;
+import com.basebackend.wheel.entity.WheelSpinRecord;
+import com.basebackend.wheel.mapper.WheelSpinRecordMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +44,9 @@ public class CoupleServiceImpl implements CoupleService {
 
     @Autowired
     private WheelUserMapper userMapper;
+
+    @Autowired
+    private WheelSpinRecordMapper spinRecordMapper;
 
     @Override
     public InviteResult inviteCouple(Long userId, CoupleInviteDTO inviteDTO) {
@@ -276,6 +283,52 @@ public class CoupleServiceImpl implements CoupleService {
 
         CoupleRelationship relationship = coupleMapper.selectByInviteCode(inviteCode);
         return relationship != null && relationship.getStatus() == 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CoupleSpinHistory getCoupleSpinHistory(Long userId, Integer pageNum, Integer pageSize) {
+        CoupleSpinHistory history = new CoupleSpinHistory();
+        history.setList(List.of());
+        history.setTotal(0L);
+
+        CoupleRelationship relationship = coupleMapper.selectConfirmedByUserId(userId);
+        if (relationship == null) {
+            return history;
+        }
+
+        Long userId1 = relationship.getUserId1();
+        Long userId2 = relationship.getUserId2();
+
+        WheelUser user1 = userMapper.selectById(userId1);
+        WheelUser user2 = userMapper.selectById(userId2);
+
+        String user1Nickname = user1 != null ? user1.getNickname() : "用户";
+        String user2Nickname = user2 != null ? user2.getNickname() : "用户";
+
+        int pageIndex = pageNum != null && pageNum > 0 ? pageNum : 1;
+        int size = pageSize != null && pageSize > 0 ? pageSize : 20;
+
+        Page<WheelSpinRecord> page = new Page<>(pageIndex, size);
+        LambdaQueryWrapper<WheelSpinRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(WheelSpinRecord::getUserId, userId1, userId2);
+        wrapper.orderByDesc(WheelSpinRecord::getSpinTime);
+        spinRecordMapper.selectPage(page, wrapper);
+
+        List<CoupleSpinHistoryItem> items = page.getRecords().stream().map(record -> {
+            CoupleSpinHistoryItem item = new CoupleSpinHistoryItem();
+            item.setId(record.getId());
+            item.setResultText(record.getResultText());
+            item.setSpinTime(record.getSpinTime() != null ? record.getSpinTime().toString() : null);
+            boolean isUser1 = record.getUserId() != null && record.getUserId().equals(userId1);
+            String partnerNickname = isUser1 ? user2Nickname : user1Nickname;
+            item.setPartnerNickname(partnerNickname);
+            return item;
+        }).toList();
+
+        history.setList(items);
+        history.setTotal(page.getTotal());
+        return history;
     }
 
     private String generateInviteCode() {

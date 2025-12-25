@@ -62,6 +62,16 @@ public interface CoupleService {
     boolean validateInviteCode(String inviteCode);
 
     /**
+     * 获取情侣转盘历史
+     *
+     * @param userId 用户ID
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 历史记录
+     */
+    CoupleSpinHistory getCoupleSpinHistory(Long userId, Integer pageNum, Integer pageSize);
+
+    /**
      * 邀请结果
      */
     class InviteResult {
@@ -293,6 +303,72 @@ public interface CoupleService {
 
         public void setCreatedAt(String createdAt) {
             this.createdAt = createdAt;
+        }
+    }
+
+    /**
+     * 情侣转盘历史
+     */
+    class CoupleSpinHistory {
+        private java.util.List<CoupleSpinHistoryItem> list;
+        private Long total;
+
+        public java.util.List<CoupleSpinHistoryItem> getList() {
+            return list;
+        }
+
+        public void setList(java.util.List<CoupleSpinHistoryItem> list) {
+            this.list = list;
+        }
+
+        public Long getTotal() {
+            return total;
+        }
+
+        public void setTotal(Long total) {
+            this.total = total;
+        }
+    }
+
+    /**
+     * 情侣转盘记录项
+     */
+    class CoupleSpinHistoryItem {
+        private Long id;
+        private String resultText;
+        private String spinTime;
+        private String partnerNickname;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public String getResultText() {
+            return resultText;
+        }
+
+        public void setResultText(String resultText) {
+            this.resultText = resultText;
+        }
+
+        public String getSpinTime() {
+            return spinTime;
+        }
+
+        public void setSpinTime(String spinTime) {
+            this.spinTime = spinTime;
+        }
+
+        public String getPartnerNickname() {
+            return partnerNickname;
+        }
+
+        public void setPartnerNickname(String partnerNickname) {
+            this.partnerNickname = partnerNickname;
         }
     }
 }

@@ -25,13 +25,13 @@ public interface WheelContentMapper extends BaseMapper<WheelContent> {
      * 查询用户创建的内容列表
      *
      * @param userId   用户ID
-     * @param pageNum  页码
+     * @param offset   偏移量
      * @param pageSize 每页大小
      * @return 内容列表
      */
     List<WheelContent> selectByCreateUserId(
             @Param("userId") Long userId,
-            @Param("pageNum") Integer pageNum,
+            @Param("offset") Integer offset,
             @Param("pageSize") Integer pageSize
     );
 

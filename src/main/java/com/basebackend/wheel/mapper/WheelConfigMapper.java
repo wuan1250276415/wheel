@@ -1,19 +1,12 @@
 package com.basebackend.wheel.mapper;
 
-import com.basebackend.wheel.entity.WheelConfig;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.basebackend.wheel.entity.WheelConfig;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-/**
- * 转盘配置Mapper
- *
- * @author wheel-api
- * @since 2025-12-16
- */
 @Mapper
-public interface WheelConfigMapper extends BaseMapper<WheelConfig> {
-
+public interface WheelConfigMapper extends BaseMapper {
     /**
      * 根据用户ID查询转盘配置
      *

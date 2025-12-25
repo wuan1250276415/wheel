@@ -1,21 +1,14 @@
 package com.basebackend.wheel.mapper;
 
-import com.basebackend.wheel.entity.CoupleRelationship;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.basebackend.wheel.entity.CoupleRelationship;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-/**
- * 情侣关系Mapper
- *
- * @author wheel-api
- * @since 2025-12-16
- */
 @Mapper
 public interface CoupleRelationshipMapper extends BaseMapper<CoupleRelationship> {
-
     /**
      * 根据用户ID查询情侣关系
      *

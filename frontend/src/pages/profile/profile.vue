@@ -193,14 +193,14 @@ async function initData() {
   try {
     // 获取用户统计
     const statsRes = await statisticsApi.getUserStatistics()
-    if (statsRes.code === 200 && statsRes.data) {
+    if (statsRes) {
       userStats.value = {
-        totalSpins: statsRes.data.totalSpins || 0,
-        todaySpins: statsRes.data.todaySpins || 0,
-        consecutiveDays: statsRes.data.consecutiveDays || 0,
-        uniqueContentsSeen: statsRes.data.uniqueContentsSeen || 0,
-        totalCoupleSpins: statsRes.data.totalCoupleSpins || 0,
-        favoriteCategory: statsRes.data.favoriteCategory || '暂无'
+        totalSpins: statsRes.totalSpins || 0,
+        todaySpins: statsRes.todaySpins || 0,
+        consecutiveDays: statsRes.consecutiveDays || 0,
+        uniqueContentsSeen: statsRes.uniqueContentsSeen || 0,
+        totalCoupleSpins: statsRes.totalCoupleSpins || 0,
+        favoriteCategory: statsRes.favoriteCategory || '暂无'
       }
     }
   } catch (error) {

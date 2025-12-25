@@ -8,41 +8,40 @@ export interface CoupleInviteDTO {
 // 邀请结果
 export interface InviteResult {
   inviteCode: string
-  expiresAt: string
+  partnerPhoneNumber: string
+  inviteMessage?: string
+  status: string
 }
 
 // 接受结果
 export interface AcceptResult {
-  coupleId: number
-  partnerInfo: {
-    id: number
-    nickname: string
-    avatar?: string
-  }
+  relationshipId: number
+  partnerNickname: string
+  status: string
+  confirmedAt: string
 }
 
 // 情侣状态
 export interface CoupleStatus {
-  hasCouple: boolean
-  status: number // 0-待确认, 1-已确认, 2-已解除
+  status: number // 0-无关系，1-待确认，2-已确认，3-已解除
+  statusText?: string
+  partnerUserId?: number
+  partnerNickname?: string
   inviteCode?: string
+  createdAt?: string
 }
 
 // 情侣信息
 export interface CoupleInfo {
-  id: number
-  partnerId: number
-  partnerNickname: string
-  partnerAvatar?: string
+  userId1: number
+  nickname1: string
+  avatarUrl1?: string
+  userId2: number
+  nickname2: string
+  avatarUrl2?: string
+  status: string
+  confirmedAt?: string
   createdAt: string
-  totalSpins: number
-}
-
-// API响应类型
-interface ApiResponse<T> {
-  code?: number
-  message?: string
-  data?: T
 }
 
 /**
@@ -50,8 +49,8 @@ interface ApiResponse<T> {
  * POST /api/couple/invite
  * Requirements: 4.1
  */
-export function inviteCouple(data: CoupleInviteDTO): Promise<ApiResponse<InviteResult>> {
-  return request<ApiResponse<InviteResult>>({
+export function inviteCouple(data: CoupleInviteDTO): Promise<InviteResult> {
+  return request<InviteResult>({
     url: '/api/couple/invite',
     method: 'POST',
     data
@@ -63,8 +62,8 @@ export function inviteCouple(data: CoupleInviteDTO): Promise<ApiResponse<InviteR
  * POST /api/couple/accept
  * Requirements: 4.2
  */
-export function acceptInvite(inviteCode: string): Promise<ApiResponse<AcceptResult>> {
-  return request<ApiResponse<AcceptResult>>({
+export function acceptInvite(inviteCode: string): Promise<AcceptResult> {
+  return request<AcceptResult>({
     url: '/api/couple/accept',
     method: 'POST',
     data: { inviteCode }
@@ -76,8 +75,8 @@ export function acceptInvite(inviteCode: string): Promise<ApiResponse<AcceptResu
  * GET /api/couple/status
  * Requirements: 4.3
  */
-export function getCoupleStatus(): Promise<ApiResponse<CoupleStatus>> {
-  return request<ApiResponse<CoupleStatus>>({
+export function getCoupleStatus(): Promise<CoupleStatus> {
+  return request<CoupleStatus>({
     url: '/api/couple/status',
     method: 'GET'
   })
@@ -88,8 +87,8 @@ export function getCoupleStatus(): Promise<ApiResponse<CoupleStatus>> {
  * GET /api/couple/info
  * Requirements: 4.4
  */
-export function getCoupleInfo(): Promise<ApiResponse<CoupleInfo>> {
-  return request<ApiResponse<CoupleInfo>>({
+export function getCoupleInfo(): Promise<CoupleInfo | null> {
+  return request<CoupleInfo | null>({
     url: '/api/couple/info',
     method: 'GET'
   })
@@ -100,8 +99,8 @@ export function getCoupleInfo(): Promise<ApiResponse<CoupleInfo>> {
  * DELETE /api/couple/unbind
  * Requirements: 4.5
  */
-export function unbindCouple(): Promise<ApiResponse<void>> {
-  return request<ApiResponse<void>>({
+export function unbindCouple(): Promise<void> {
+  return request<void>({
     url: '/api/couple/unbind',
     method: 'DELETE'
   })
@@ -112,11 +111,11 @@ export function unbindCouple(): Promise<ApiResponse<void>> {
  * GET /api/couple/validate-invite-code
  * Requirements: 4.6
  */
-export function validateInviteCode(inviteCode: string): Promise<ApiResponse<boolean>> {
-  return request<ApiResponse<boolean>>({
+export function validateInviteCode(inviteCode: string): Promise<boolean> {
+  return request<boolean>({
     url: '/api/couple/validate-invite-code',
     method: 'GET',
-    data: { inviteCode }
+    params: { inviteCode }
   })
 }
 
@@ -124,7 +123,7 @@ export function validateInviteCode(inviteCode: string): Promise<ApiResponse<bool
 export function getCoupleSpinHistory(params: {
   page?: number
   pageSize?: number
-}): Promise<ApiResponse<{
+}): Promise<{
   list: Array<{
     id: number
     resultText: string
@@ -132,10 +131,10 @@ export function getCoupleSpinHistory(params: {
     partnerNickname: string
   }>
   total: number
-}>> {
+}> {
   return request({
     url: '/api/couple/history',
     method: 'GET',
-    data: params
+    params
   })
 }

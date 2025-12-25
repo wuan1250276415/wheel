@@ -90,6 +90,19 @@ public class WheelSpinServiceImpl implements WheelSpinService {
 
     @Override
     public WheelSpinResultDTO spin(Long userId, WheelSpinDTO spinDTO) {
+        // 0. 如果未指定分类，使用所有启用的分类
+        List<Long> categoryIds = spinDTO.getCategoryIds();
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            List<WheelCategory> allCategories = getCategories();
+            if (allCategories.isEmpty()) {
+                throw new BusinessException("暂无可用分类");
+            }
+            categoryIds = allCategories.stream()
+                    .map(WheelCategory::getId)
+                    .toList();
+            spinDTO.setCategoryIds(categoryIds);
+        }
+
         // 1. 获取客户端信息（IP地址、设备ID）
         String ipAddress = RequestUtils.getClientIp();
         String deviceId = RequestUtils.getDeviceId();

@@ -3,7 +3,7 @@ import type { PageResult } from '@/types/api'
 
 // 转盘分类
 export interface WheelCategory {
-  id: string
+  id: number
   categoryName: string
   description?: string
   sortOrder: number
@@ -15,8 +15,8 @@ export interface WheelCategory {
 
 // 转盘内容
 export interface WheelContent {
-  id: string
-  categoryId: string
+  id: number
+  categoryId: number
   contentText: string
   weight: number
   status: number
@@ -31,16 +31,16 @@ export interface WheelOptions {
 
 // 转盘执行DTO
 export interface WheelSpinDTO {
-  categoryIds?: string[]
+  categoryIds?: number[]
   radius?: number
   animationDuration?: number
 }
 
 // 转盘结果
 export interface WheelSpinResultDTO {
-  contentId: string
+  contentId: number
   resultText: string
-  categoryId: string
+  categoryId: number
   categoryName: string
   rotationAngle: number
   spinDuration: number
@@ -49,12 +49,10 @@ export interface WheelSpinResultDTO {
 
 // 转盘历史记录
 export interface WheelSpinRecord {
-  id: string
-  contentId: string
-  // contentText: string // 旧字段
-  resultText: string // 新字段，API返回的是 resultText
-  categoryId: string // 新字段，API返回了 categoryId
-  // categoryName: string // API没返回这个，需要前端映射
+  id: number
+  contentId: number
+  resultText: string
+  categoryId: number
   spinTime: string
 }
 
@@ -77,7 +75,7 @@ export function getCategories() {
  * 获取转盘内容
  * @param categoryIds 分类ID数组，必传，用于获取指定分类下的内容
  */
-export function getContents(categoryIds: string[]) {
+export function getContents(categoryIds: number[]) {
   return request<WheelContent[]>({
     url: '/api/wheel/contents',
     method: 'GET',

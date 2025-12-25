@@ -1,19 +1,12 @@
 package com.basebackend.wheel.mapper;
 
-import com.basebackend.wheel.entity.WheelUser;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.basebackend.wheel.entity.WheelUser;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-/**
- * 用户Mapper
- *
- * @author wheel-api
- * @since 2025-12-16
- */
 @Mapper
 public interface WheelUserMapper extends BaseMapper<WheelUser> {
-
     /**
      * 根据手机号查询用户
      *

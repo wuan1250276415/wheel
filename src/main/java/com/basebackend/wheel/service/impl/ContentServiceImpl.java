@@ -33,7 +33,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-@Transactional
 public class ContentServiceImpl implements ContentService {
 
     @Autowired
@@ -58,6 +57,7 @@ public class ContentServiceImpl implements ContentService {
     };
 
     @Override
+    @Transactional
     public SubmitResult submitContent(Long userId, ContentSubmitDTO submitDTO) {
         // 1. 检查分类是否存在
         // TODO: 验证分类ID有效性
@@ -138,6 +138,7 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    @Transactional
     public boolean updateContent(Long userId, Long contentId, ContentSubmitDTO submitDTO) {
         // 1. 查找内容
         WheelContent content = contentMapper.selectById(contentId);
@@ -182,6 +183,7 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    @Transactional
     public boolean deleteContent(Long userId, Long contentId) {
         // 1. 查找内容
         WheelContent content = contentMapper.selectById(contentId);
@@ -206,6 +208,7 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    @Transactional
     public boolean reportContent(Long userId, Long contentId, Integer reason, String description) {
         // 1. 检查内容是否存在
         WheelContent content = contentMapper.selectById(contentId);
@@ -249,7 +252,7 @@ public class ContentServiceImpl implements ContentService {
         ContentAuditLog latestLog = auditLogMapper.selectOne(
                 new LambdaQueryWrapper<ContentAuditLog>()
                         .eq(ContentAuditLog::getContentId, contentId)
-                        .orderByDesc(ContentAuditLog::getCreatedAt)
+                        .orderByDesc(ContentAuditLog::getCreateTime)
                         .last("LIMIT 1"));
 
         if (latestLog != null) {
@@ -264,7 +267,7 @@ public class ContentServiceImpl implements ContentService {
             }
             LocalDateTime auditedAt = latestLog.getAuditedAt() != null
                     ? latestLog.getAuditedAt()
-                    : latestLog.getCreatedAt();
+                    : latestLog.getCreateTime();
             if (auditedAt != null) {
                 status.setAuditedAt(auditedAt.toString());
             }

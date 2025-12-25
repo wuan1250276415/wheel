@@ -138,20 +138,21 @@ async function initData() {
       coupleApi.getCoupleInfo()
     ])
 
+    
     // 处理用户统计
-    if (statsResult.status === 'fulfilled' && statsResult.value.code === 200) {
-      const statsData = statsResult.value.data
+    if (statsResult.status === 'fulfilled') {
+      const statsData = statsResult.value
       todayStats.value = {
         spins: statsData?.todaySpins || 0,
-        duration: statsData?.avgSpinDuration ? Math.round(statsData.avgSpinDuration / 1000 / 60) : 0,
+        duration: statsData?.avgSpinDuration ? Math.round(Number(statsData.avgSpinDuration) / 1000 / 60) : 0,
         coupleSpins: statsData?.totalCoupleSpins || 0,
         consecutiveDays: statsData?.consecutiveDays || 0
       }
     }
 
     // 处理情侣信息
-    if (coupleResult.status === 'fulfilled' && coupleResult.value.code === 200) {
-      coupleInfo.value = coupleResult.value.data
+    if (coupleResult.status === 'fulfilled') {
+      coupleInfo.value = coupleResult.value
     }
 
     // 获取最近的历史记录
@@ -187,8 +188,19 @@ function formatTime(timeStr: string) {
 }
 
 // 导航到指定页面
+// 导航到指定页面
 function navigateTo(url: string) {
-  uni.navigateTo({ url })
+  const tabBarPages = [
+    '/pages/index/index',
+    '/pages/wheel/wheel',
+    '/pages/profile/profile'
+  ]
+  
+  if (tabBarPages.includes(url)) {
+    uni.switchTab({ url })
+  } else {
+    uni.navigateTo({ url })
+  }
 }
 </script>
 

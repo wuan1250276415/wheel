@@ -24,22 +24,4 @@ public interface ContentAuditLogMapper extends BaseMapper<ContentAuditLog> {
      */
     List<ContentAuditLog> selectByContentId(@Param("contentId") Long contentId);
 
-    /**
-     * 查询待审核的内容
-     *
-     * @param pageNum 页码
-     * @param pageSize 每页大小
-     * @return 待审核内容列表
-     */
-    List<ContentAuditLog> selectPendingAudits(
-            @Param("pageNum") Integer pageNum,
-            @Param("pageSize") Integer pageSize
-    );
-
-    /**
-     * 统计待审核数量
-     *
-     * @return 待审核数量
-     */
-    int countPendingAudits();
 }

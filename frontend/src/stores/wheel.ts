@@ -9,7 +9,7 @@ export const useWheelStore = defineStore('wheel', () => {
   // 状态
   const categories = ref<WheelCategory[]>([])
   const contents = ref<WheelContent[]>([])
-  const selectedCategoryIds = ref<string[]>([])
+  const selectedCategoryIds = ref<number[]>([])
   const isSpinning = ref(false)
   const lastResult = ref<WheelContent | null>(null)
   const history = ref<WheelSpinRecord[]>([])
@@ -44,7 +44,7 @@ export const useWheelStore = defineStore('wheel', () => {
    * 获取转盘内容
    * @param categoryIds 分类ID数组，必传
    */
-  async function fetchContents(categoryIds: string[]) {
+  async function fetchContents(categoryIds: number[]) {
     try {
       selectedCategoryIds.value = categoryIds
       const data = await wheelApi.getContents(categoryIds)
@@ -56,7 +56,7 @@ export const useWheelStore = defineStore('wheel', () => {
   }
 
   // 执行转盘
-  async function spin(categoryIds?: string[], config?: { radius?: number; animationDuration?: number }) {
+  async function spin(categoryIds?: number[], config?: { radius?: number; animationDuration?: number }) {
     if (isSpinning.value) {
       return { success: false, message: '转盘正在运行中' }
     }
@@ -64,29 +64,21 @@ export const useWheelStore = defineStore('wheel', () => {
     try {
       isSpinning.value = true
       const data = await wheelApi.spin({
-        categoryIds,
-        radius: config?.radius,
-        animationDuration: config?.animationDuration
+        categoryIds: categoryIds || [],
+        radius: config?.radius || 175,
+        animationDuration: config?.animationDuration || 3000
       })
 
-      // 1. 根据返回的 contentId 在本地 stores 中找到完整的 WheelContent 对象
-      // 因为前端 WheelCanvas 需要 width/color/etc (虽然目前只用了 text/weight, 但保持对象完整性更好)
-      // 如果找不到(理论不应发生), 则构造一个临时对象
-      let targetContent = contents.value.find(c => c.id === data.contentId)
-      if (!targetContent) {
-        targetContent = {
-          id: data.contentId,
-          categoryId: data.categoryId.toString(),
-          contentText: data.resultText,
-          weight: 1,
-          status: 1,
-          isSystem: false
-        }
+      const targetContent: WheelContent = {
+        id: data.contentId,
+        categoryId: data.categoryId,
+        contentText: data.resultText,
+        weight: 1,
+        status: 1,
+        isSystem: false
       }
 
       lastResult.value = targetContent
-
-      // 注意：历史记录通过接口 fetchHistory 获取，不在此处本地添加
 
       return {
         success: true,

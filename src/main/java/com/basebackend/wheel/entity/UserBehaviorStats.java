@@ -1,77 +1,61 @@
 package com.basebackend.wheel.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.basebackend.database.entity.BaseEntity;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Date;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 用户行为统计表
- *
- * @author wheel-api
- * @since 2025-12-16
  */
 @Data
-@EqualsAndHashCode(callSuper = false)
-@TableName("user_behavior_stats")
-public class UserBehaviorStats implements Serializable {
-
+@EqualsAndHashCode(callSuper = true)
+@TableName(value = "wheel_api.user_behavior_stats")
+public class UserBehaviorStats extends BaseEntity implements Serializable {
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 统计ID - 主键
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
-
     /**
      * 用户ID
      */
-    @TableField("user_id")
+    @TableField(value = "user_id")
+    @NotNull(message = "用户ID不能为null")
     private Long userId;
 
     /**
      * 统计日期
      */
-    @TableField("stats_date")
+    @TableField(value = "stats_date")
+    @NotNull(message = "统计日期不能为null")
     private LocalDate statsDate;
 
     /**
      * 转盘次数
      */
-    @TableField("spin_count")
+    @TableField(value = "spin_count")
     private Integer spinCount;
 
     /**
      * 使用时长（分钟）
      */
-    @TableField("usage_duration")
+    @TableField(value = "usage_duration")
     private Integer usageDuration;
 
     /**
-     * 偏好分类ID（出现次数最多的分类）
+     * 偏好分类ID
      */
-    @TableField("preferred_category_id")
+    @TableField(value = "preferred_category_id")
     private Long preferredCategoryId;
 
     /**
      * 平均转盘时长（毫秒）
      */
-    @TableField("avg_spin_duration")
+    @TableField(value = "avg_spin_duration")
     private Long avgSpinDuration;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
 }

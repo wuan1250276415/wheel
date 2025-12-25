@@ -1,5 +1,6 @@
 package com.basebackend.wheel.controller;
 
+import com.basebackend.common.context.UserContextHolder;
 import com.basebackend.common.model.Result;
 import com.basebackend.wheel.service.StatisticsService;
 import com.basebackend.wheel.util.AuditHelper;
@@ -34,7 +35,7 @@ public class StatisticsController {
     @GetMapping("/user")
     public Result<StatisticsService.UserStatistics> getUserStatistics(HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             StatisticsService.UserStatistics stats = statisticsService.getUserStatistics(userId);
             return Result.success(stats);
         } catch (Exception e) {

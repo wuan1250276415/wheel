@@ -1,5 +1,6 @@
 package com.basebackend.wheel.controller;
 
+import com.basebackend.common.context.UserContextHolder;
 import com.basebackend.common.model.Result;
 import com.basebackend.wheel.dto.ContentSubmitDTO;
 import com.basebackend.wheel.entity.WheelContent;
@@ -36,7 +37,7 @@ public class ContentController {
             @Valid @RequestBody ContentSubmitDTO submitDTO,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             ContentService.SubmitResult result = contentService.submitContent(userId, submitDTO);
             log.info("用户提交内容成功: userId={}, contentId={}", userId, result.getContentId());
             return Result.success(result);
@@ -53,7 +54,7 @@ public class ContentController {
             @RequestParam(defaultValue = "20") Integer pageSize,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             List<WheelContent> contents = contentService.getMyContents(userId, pageNum, pageSize);
             return Result.success(contents);
         } catch (Exception e) {
@@ -69,7 +70,7 @@ public class ContentController {
             @Valid @RequestBody ContentSubmitDTO submitDTO,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             boolean success = contentService.updateContent(userId, contentId, submitDTO);
             if (success) {
                 log.info("用户更新内容成功: userId={}, contentId={}", userId, contentId);
@@ -89,7 +90,7 @@ public class ContentController {
             @PathVariable Long contentId,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             boolean success = contentService.deleteContent(userId, contentId);
             if (success) {
                 log.info("用户删除内容成功: userId={}, contentId={}", userId, contentId);
@@ -111,7 +112,7 @@ public class ContentController {
             @RequestParam(required = false) String description,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             boolean success = contentService.reportContent(userId, contentId, reason, description);
             if (success) {
                 log.info("用户举报内容成功: reporterId={}, contentId={}, reason={}", userId, contentId, reason);

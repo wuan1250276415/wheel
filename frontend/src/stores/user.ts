@@ -51,6 +51,23 @@ export const useUserStore = defineStore('user', () => {
       }
       uni.setStorageSync('userInfo', res.userInfo)
 
+      const userId = res.userInfo.userId ?? res.userInfo.id
+      if (userId != null) {
+        authApi.syncWheelUser({
+          userId,
+          username: res.userInfo.username,
+          nickname: res.userInfo.nickname,
+          phone: res.userInfo.phone,
+          avatar: res.userInfo.avatar,
+          gender: res.userInfo.gender,
+          deptId: res.userInfo.deptId,
+          userType: res.userInfo.userType,
+          status: res.userInfo.status
+        }).catch((error: any) => {
+          console.warn('同步用户信息失败:', error?.message || error)
+        })
+      }
+
       return { success: true }
     } catch (error: any) {
       return { success: false, message: error.message || '登录失败' }

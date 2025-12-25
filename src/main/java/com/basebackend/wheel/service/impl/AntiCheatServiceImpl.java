@@ -46,13 +46,20 @@ public class AntiCheatServiceImpl implements AntiCheatService {
     @Override
     public ValidationResult validateSpinFrequency(Long userId, String ipAddress, String deviceId) {
         try {
-            // 1. 检查每日转盘次数限制
+            // 1. 检查每日转盘次数限制 - 使用原子操作
             String frequencyKey = FREQUENCY_KEY + userId;
-            Object dailyCount = redisTemplate.opsForValue().get(frequencyKey);
+            Long currentCount = redisTemplate.opsForValue().increment(frequencyKey);
 
-            int currentCount = dailyCount != null ? Integer.parseInt(dailyCount.toString()) : 0;
+            if (currentCount == null) {
+                currentCount = 1L;
+            }
 
-            if (currentCount >= maxDailySpins) {
+            // 首次设置过期时间
+            if (currentCount == 1) {
+                redisTemplate.expire(frequencyKey, 24, TimeUnit.HOURS);
+            }
+
+            if (currentCount > maxDailySpins) {
                 log.warn("用户今日转盘次数已达上限: userId={}, count={}, max={}",
                         userId, currentCount, maxDailySpins);
                 return ValidationResult.fail("今日转盘次数已达上限");
@@ -69,12 +76,13 @@ public class AntiCheatServiceImpl implements AntiCheatService {
                 if (secondsBetween < minSpinInterval / 1000) {
                     log.warn("用户转盘间隔过短: userId={}, interval={}ms, min={}ms",
                             userId, secondsBetween * 1000, minSpinInterval);
+                    // 回滚计数
+                    redisTemplate.opsForValue().decrement(frequencyKey);
                     return ValidationResult.warn("转盘间隔过短，请稍后再试");
                 }
             }
 
-            // 3. 更新计数器
-            redisTemplate.opsForValue().set(frequencyKey, currentCount + 1, 24, TimeUnit.HOURS);
+            // 3. 更新最后转盘时间
             redisTemplate.opsForValue().set(intervalKey, LocalDateTime.now().toString(), 1, TimeUnit.HOURS);
 
             return ValidationResult.success();

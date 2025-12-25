@@ -8,13 +8,6 @@ import java.util.List;
 
 @Mapper
 public interface WheelCategoryMapper extends BaseMapper<WheelCategory> {
-    int deleteByPrimaryKey(Long id);
-
-
-    WheelCategory selectByPrimaryKey(Long id);
-
-
-    int updateByPrimaryKey(WheelCategory record);
 
     /**
      * 获取启用的分类列表，按排序权重降序

@@ -181,26 +181,15 @@ async function loadData() {
     // 并行加载所有数据
     const [userRes, trendRes, popularRes, categoryRes] = await Promise.all([
       statisticsApi.getUserStatistics(),
-      statisticsApi.getSpinTrend(trendDateRange.value),
+      statisticsApi.getSpinTrend(trendDateRange.value.start, trendDateRange.value.end),
       statisticsApi.getPopularContent({ limit: 10 }),
       statisticsApi.getCategoryStatistics()
     ])
 
-    if (userRes.code === 200) {
-      userStats.value = userRes.data
-    }
-
-    if (trendRes.code === 200) {
-      spinTrend.value = trendRes.data
-    }
-
-    if (popularRes.code === 200) {
-      popularContent.value = popularRes.data
-    }
-
-    if (categoryRes.code === 200) {
-      categoryStats.value = categoryRes.data
-    }
+    userStats.value = userRes || {}
+    spinTrend.value = trendRes || []
+    popularContent.value = popularRes || []
+    categoryStats.value = categoryRes || []
   } catch (error) {
     console.error('加载统计数据失败:', error)
     uni.showToast({
@@ -245,11 +234,8 @@ function onEndDateChange(e: any) {
 // 加载趋势数据
 async function loadTrendData() {
   try {
-    const res = await statisticsApi.getSpinTrend(trendDateRange.value)
-
-    if (res.code === 200) {
-      spinTrend.value = res.data
-    }
+    const res = await statisticsApi.getSpinTrend(trendDateRange.value.start, trendDateRange.value.end)
+    spinTrend.value = res || []
   } catch (error) {
     console.error('加载趋势数据失败:', error)
   }

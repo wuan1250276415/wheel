@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.basebackend.wheel.mapper.WheelUserMapper">
+  <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelUser">
+    <!--@mbg.generated-->
+    <!--@Table wheel_api.wheel_user-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="phone_number" jdbcType="VARCHAR" property="phoneNumber" />
+    <result column="nickname" jdbcType="VARCHAR" property="nickname" />
+    <result column="avatar_url" jdbcType="VARCHAR" property="avatarUrl" />
+    <result column="gender" jdbcType="INTEGER" property="gender" />
+    <result column="age" jdbcType="INTEGER" property="age" />
+    <result column="city" jdbcType="VARCHAR" property="city" />
+    <result column="status" jdbcType="BOOLEAN" property="status" />
+    <result column="last_login_time" jdbcType="TIMESTAMP" property="lastLoginTime" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
+    <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, phone_number, nickname, avatar_url, gender, age, city, `status`, last_login_time, 
+    create_time, update_time, create_by, update_by, deleted
+  </sql>
 
-    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.WheelUser">
-        <id column="user_id" property="userId" jdbcType="BIGINT"/>
-        <result column="phone_number" property="phoneNumber" jdbcType="VARCHAR"/>
-        <result column="password" property="password" jdbcType="VARCHAR"/>
-        <result column="nickname" property="nickname" jdbcType="VARCHAR"/>
-        <result column="avatar_url" property="avatarUrl" jdbcType="VARCHAR"/>
-        <result column="gender" property="gender" jdbcType="TINYINT"/>
-        <result column="birthday" property="birthday" jdbcType="DATE"/>
-        <result column="status" property="status" jdbcType="TINYINT"/>
-        <result column="last_login_time" property="lastLoginTime" jdbcType="TIMESTAMP"/>
-        <result column="last_login_ip" property="lastLoginIp" jdbcType="VARCHAR"/>
-        <result column="register_time" property="registerTime" jdbcType="TIMESTAMP"/>
-        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
-        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
-        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
-        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
-    </resultMap>
-
-    <sql id="Base_Column_List">
-        user_id, phone_number, password, nickname, avatar_url, gender, birthday, status,
-        last_login_time, last_login_ip, register_time, created_at, create_by, updated_at,
-        update_by
-    </sql>
 
     <!-- 根据手机号查询用户 -->
     <select id="selectByPhoneNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM wheel_user
         WHERE phone_number = #{phoneNumber,jdbcType=VARCHAR}
         AND status != 2
@@ -39,23 +39,23 @@
     <update id="updateLastLoginTime">
         UPDATE wheel_user
         SET last_login_time = NOW(),
-            updated_at = NOW()
-        WHERE user_id = #{userId,jdbcType=BIGINT}
+            update_time = NOW()
+        WHERE id = #{userId,jdbcType=BIGINT}
     </update>
 
     <!-- 根据状态查询用户列表 -->
     <select id="selectByStatus" parameterType="java.lang.Integer" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM wheel_user
         WHERE status = #{status,jdbcType=TINYINT}
-        ORDER BY created_at DESC
+        ORDER BY create_time DESC
     </select>
 
     <!-- 查询今日新增用户数 -->
     <select id="countTodayNewUsers" resultType="java.lang.Long">
         SELECT COUNT(*) FROM wheel_user
-        WHERE DATE(created_at) = CURDATE()
+        WHERE DATE(create_time) = CURDATE()
         AND status != 2
     </select>
 </mapper>

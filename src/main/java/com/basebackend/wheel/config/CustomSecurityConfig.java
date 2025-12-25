@@ -41,8 +41,7 @@ public class CustomSecurityConfig {
                     new AntPathRequestMatcher("/swagger-ui/**"),
                     new AntPathRequestMatcher("/v3/api-docs/**"),
                     new AntPathRequestMatcher("/webjars/**"),
-                    new AntPathRequestMatcher("/actuator/**"),
-                    new AntPathRequestMatcher("/druid/**")
+                    new AntPathRequestMatcher("/actuator/health")
                 ).permitAll()
                 // 其他接口需要认证
                 .anyRequest().authenticated())

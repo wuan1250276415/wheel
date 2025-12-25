@@ -1,35 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.basebackend.wheel.mapper.ContentReportMapper">
-
-    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.ContentReport">
-        <id column="report_id" property="reportId" jdbcType="BIGINT"/>
-        <result column="content_id" property="contentId" jdbcType="BIGINT"/>
-        <result column="report_user_id" property="reportUserId" jdbcType="BIGINT"/>
-        <result column="report_type" property="reportType" jdbcType="TINYINT"/>
-        <result column="report_reason" property="reportReason" jdbcType="VARCHAR"/>
-        <result column="description" property="description" jdbcType="VARCHAR"/>
-        <result column="report_time" property="reportTime" jdbcType="TIMESTAMP"/>
-        <result column="handle_status" property="handleStatus" jdbcType="TINYINT"/>
-        <result column="handle_user_id" property="handleUserId" jdbcType="BIGINT"/>
-        <result column="handle_time" property="handleTime" jdbcType="TIMESTAMP"/>
-        <result column="handle_result" property="handleResult" jdbcType="VARCHAR"/>
-        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
-        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
-        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
-        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
-    </resultMap>
-
-    <sql id="Base_Column_List">
-        report_id, content_id, report_user_id, report_type, report_reason, description,
-        report_time, handle_status, handle_user_id, handle_time, handle_result,
-        created_at, create_by, updated_at, update_by
-    </sql>
+  <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.ContentReport">
+    <!--@mbg.generated-->
+    <!--@Table wheel_api.content_report-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="content_id" jdbcType="BIGINT" property="contentId" />
+    <result column="reporter_user_id" jdbcType="BIGINT" property="reporterUserId" />
+    <result column="report_type" jdbcType="BOOLEAN" property="reportType" />
+    <result column="report_time" jdbcType="TIMESTAMP" property="reportTime" />
+    <result column="report_reason" jdbcType="BOOLEAN" property="reportReason" />
+    <result column="report_description" jdbcType="LONGVARCHAR" property="reportDescription" />
+    <result column="handle_status" jdbcType="BOOLEAN" property="handleStatus" />
+    <result column="handler_id" jdbcType="BIGINT" property="handlerId" />
+    <result column="handled_at" jdbcType="TIMESTAMP" property="handledAt" />
+    <result column="handle_result" jdbcType="LONGVARCHAR" property="handleResult" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
+    <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, content_id, reporter_user_id, report_type, report_time, report_reason, report_description, 
+    handle_status, handler_id, handled_at, handle_result, create_time, update_time, create_by, 
+    update_by, deleted
+  </sql>
 
     <!-- 根据内容ID查询举报记录 -->
     <select id="selectByContentId" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM content_report
         WHERE content_id = #{contentId,jdbcType=BIGINT}
         ORDER BY report_time DESC
@@ -38,16 +40,16 @@
     <!-- 根据举报人ID查询举报记录 -->
     <select id="selectByReportUserId" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM content_report
-        WHERE report_user_id = #{reportUserId,jdbcType=BIGINT}
+        WHERE reporter_user_id = #{reportUserId,jdbcType=BIGINT}
         ORDER BY report_time DESC
     </select>
 
     <!-- 查询未处理的举报 -->
     <select id="selectUnhandledReports" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM content_report
         WHERE handle_status = 0
         ORDER BY report_time ASC
@@ -59,7 +61,7 @@
         report_type as reportType,
         COUNT(*) as count
         FROM content_report
-        WHERE report_time >= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        WHERE report_time &gt;= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
         GROUP BY report_type
     </select>
 
@@ -67,25 +69,25 @@
     <update id="updateHandleStatus">
         UPDATE content_report
         SET handle_status = #{handleStatus,jdbcType=TINYINT},
-            handle_user_id = #{handleUserId,jdbcType=BIGINT},
-            handle_time = NOW(),
+        handler_id = #{handleUserId,jdbcType=BIGINT},
+        handled_at = NOW(),
             handle_result = #{handleResult,jdbcType=VARCHAR},
-            updated_at = NOW(),
+        update_time = NOW(),
             update_by = #{handleUserId,jdbcType=BIGINT}
-        WHERE report_id = #{reportId,jdbcType=BIGINT}
+        WHERE reporter_user_id = #{reportId,jdbcType=BIGINT}
     </update>
 
     <!-- 批量更新处理状态 -->
     <update id="batchUpdateHandleStatus">
         UPDATE content_report
         SET handle_status = #{handleStatus,jdbcType=TINYINT},
-            handle_user_id = #{handleUserId,jdbcType=BIGINT},
-            handle_time = NOW(),
+        handler_id = #{handleUserId,jdbcType=BIGINT},
+        handled_at = NOW(),
             handle_result = #{handleResult,jdbcType=VARCHAR},
-            updated_at = NOW(),
+            update_time = NOW(),
             update_by = #{handleUserId,jdbcType=BIGINT}
-        WHERE report_id IN
-        <foreach collection="reportIds" item="id" open="(" separator="," close=")">
+        WHERE reporter_user_id IN
+        <foreach close=")" collection="reportIds" item="id" open="(" separator=",">
             #{id,jdbcType=BIGINT}
         </foreach>
     </update>
@@ -93,10 +95,10 @@
     <!-- 查询重复举报 -->
     <select id="selectDuplicateReports" resultMap="BaseResultMap">
         SELECT
-        <include refid="Base_Column_List"/>
+        <include refid="Base_Column_List" />
         FROM content_report
         WHERE content_id = #{contentId,jdbcType=BIGINT}
         AND handle_status = 0
-        AND report_time >= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+        AND report_time &gt;= DATE_SUB(NOW(), INTERVAL #{days,jdbcType=INTEGER} DAY)
     </select>
 </mapper>

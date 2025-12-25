@@ -13,18 +13,18 @@
     <result column="spin_time" jdbcType="TIMESTAMP" property="spinTime" />
     <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
     <result column="device_id" jdbcType="VARCHAR" property="deviceId" />
-    <result column="client_type" jdbcType="BOOLEAN" property="clientType" />
-    <result column="is_anomaly" jdbcType="BOOLEAN" property="isAnomaly" />
-    <result column="created_time" jdbcType="TIMESTAMP" property="createTime" />
-    <result column="created_by" jdbcType="BIGINT" property="createBy" />
+    <result column="client_type" jdbcType="INTEGER" property="clientType" />
+    <result column="is_anomaly" jdbcType="INTEGER" property="isAnomaly" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
-    <result column="updated_by" jdbcType="BIGINT" property="updateBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
     <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, user_id, content_id, result_text, category_id, spin_duration, spin_time, ip_address, 
-    device_id, client_type, is_anomaly, created_time, created_by, update_time, updated_by, 
+    device_id, client_type, is_anomaly, create_time, create_by, update_time, update_by,
     deleted
   </sql>
 

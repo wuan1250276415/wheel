@@ -1,9 +1,10 @@
 package com.basebackend.wheel.controller;
 
+import com.basebackend.common.context.UserContextHolder;
 import com.basebackend.common.model.Result;
+import com.basebackend.wheel.dto.CoupleAcceptDTO;
 import com.basebackend.wheel.dto.CoupleInviteDTO;
 import com.basebackend.wheel.service.CoupleService;
-import com.basebackend.wheel.util.AuditHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ public class CoupleController {
             @Valid @RequestBody CoupleInviteDTO inviteDTO,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             CoupleService.InviteResult result = coupleService.inviteCouple(userId, inviteDTO);
             log.info("用户邀请情侣成功: userId={}, phoneNumber={}", userId, inviteDTO.getPartnerPhoneNumber());
             return Result.success(result);
@@ -47,12 +48,12 @@ public class CoupleController {
     @Operation(summary = "接受邀请", description = "使用邀请码接受情侣邀请")
     @PostMapping("/accept")
     public Result<CoupleService.AcceptResult> acceptInvite(
-            @RequestParam String inviteCode,
+            @Valid @RequestBody CoupleAcceptDTO acceptDTO,
             HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
-            CoupleService.AcceptResult result = coupleService.acceptInvite(userId, inviteCode);
-            log.info("用户接受邀请成功: userId={}, inviteCode={}", userId, inviteCode);
+            Long userId = UserContextHolder.getUserId();
+            CoupleService.AcceptResult result = coupleService.acceptInvite(userId, acceptDTO.getInviteCode());
+            log.info("用户接受邀请成功: userId={}, inviteCode={}", userId, acceptDTO.getInviteCode());
             return Result.success(result);
         } catch (Exception e) {
             log.error("用户接受邀请失败: error={}", e.getMessage());
@@ -64,7 +65,7 @@ public class CoupleController {
     @GetMapping("/status")
     public Result<CoupleService.CoupleStatus> getCoupleStatus(HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             CoupleService.CoupleStatus status = coupleService.getCoupleStatus(userId);
             return Result.success(status);
         } catch (Exception e) {
@@ -77,7 +78,7 @@ public class CoupleController {
     @GetMapping("/info")
     public Result<CoupleService.CoupleInfo> getCoupleInfo(HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             CoupleService.CoupleInfo info = coupleService.getCoupleInfo(userId);
             return Result.success(info);
         } catch (Exception e) {
@@ -90,7 +91,7 @@ public class CoupleController {
     @DeleteMapping("/unbind")
     public Result<Void> unbindCouple(HttpServletRequest request) {
         try {
-            Long userId = AuditHelper.getCurrentUserId();
+            Long userId = UserContextHolder.getUserId();
             boolean success = coupleService.unbindCouple(userId);
             if (success) {
                 log.info("用户解除关系成功: userId={}", userId);
@@ -112,6 +113,21 @@ public class CoupleController {
             return Result.success(valid);
         } catch (Exception e) {
             log.error("验证邀请码失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Operation(summary = "获取情侣转盘历史", description = "获取情侣转盘记录")
+    @GetMapping("/history")
+    public Result<CoupleService.CoupleSpinHistory> getCoupleHistory(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+        try {
+            Long userId = UserContextHolder.getUserId();
+            CoupleService.CoupleSpinHistory history = coupleService.getCoupleSpinHistory(userId, page, pageSize);
+            return Result.success(history);
+        } catch (Exception e) {
+            log.error("获取情侣转盘历史失败: error={}", e.getMessage());
             throw e;
         }
     }

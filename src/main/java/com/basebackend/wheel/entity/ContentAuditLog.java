@@ -1,6 +1,7 @@
 package com.basebackend.wheel.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.basebackend.database.entity.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,15 +17,10 @@ import java.time.LocalDateTime;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("content_audit_log")
-public class ContentAuditLog implements Serializable {
+public class ContentAuditLog extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 日志ID - 主键
-     */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
 
     /**
      * 内容ID
@@ -73,10 +69,4 @@ public class ContentAuditLog implements Serializable {
      */
     @TableField("audit_type")
     private Integer auditType;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
 }

@@ -11,11 +11,16 @@ export interface LoginResponse {
   accessToken: string
   refreshToken?: string
   userInfo: {
-    id: number
+    userId: number
+    id?: number
     username: string
     nickname?: string
     avatar?: string
     phone?: string
+    gender?: number
+    deptId?: number
+    userType?: number
+    status?: number
   }
 }
 
@@ -30,12 +35,17 @@ export function login(data: LoginRequest): Promise<LoginResponse> {
 
 // 用户信息类型
 export interface UserInfo {
-  id: number
+  userId?: number
+  id?: number
   username: string
   nickname?: string
   avatar?: string
   phone?: string
   createdAt?: string
+  gender?: number
+  deptId?: number
+  userType?: number
+  status?: number
 }
 
 // 注册接口
@@ -81,6 +91,27 @@ export function refreshToken(refreshTokenValue: string) {
     url: '/basebackend-user-api/api/user/auth/refresh',
     method: 'POST',
     data: { refreshToken: refreshTokenValue }
+  })
+}
+
+export interface SyncUserRequest {
+  userId: number
+  username?: string
+  nickname?: string
+  phone?: string
+  avatar?: string
+  gender?: number
+  deptId?: number
+  userType?: number
+  status?: number
+}
+
+// 同步用户信息到wheel-api
+export function syncWheelUser(data: SyncUserRequest) {
+  return request<void>({
+    url: '/api/auth/sync-user',
+    method: 'POST',
+    data
   })
 }
 
