@@ -1,5 +1,11 @@
 <template>
   <view class="container">
+    <!-- VIP会员标识 -->
+    <view class="vip-badge" v-if="membershipStatus && membershipStatus.tier >= 1">
+      <view class="vip-icon">{{ membershipStatus.tier >= 2 ? 'SVIP' : 'VIP' }}</view>
+      <text class="vip-text">无限转盘次数</text>
+    </view>
+
     <!-- 转盘区域 -->
     <view class="wheel-section">
       <WheelCanvas
@@ -68,6 +74,9 @@
         </view>
       </scroll-view>
     </view>
+
+    <!-- 广告位 -->
+    <AdBanner placement-key="wheel_bottom" />
   </view>
 </template>
 
@@ -75,6 +84,9 @@
 import { ref, onMounted } from 'vue'
 import { useWheelStore } from '@/stores/wheel'
 import WheelCanvas from '@/components/WheelCanvas.vue'
+import AdBanner from '@/components/AdBanner.vue'
+import { membershipAPI } from '@/api/membership'
+import type { MembershipStatusVO } from '@/types/api'
 
 const wheelStore = useWheelStore()
 
@@ -85,11 +97,22 @@ const config = ref({
 })
 
 const wheelKey = ref(0)
+const membershipStatus = ref<MembershipStatusVO | null>(null)
 
 // 页面加载
 onMounted(async () => {
   await loadData()
+  await loadMembershipStatus()
 })
+
+// 加载会员状态
+async function loadMembershipStatus() {
+  try {
+    membershipStatus.value = await membershipAPI.getMembershipStatus()
+  } catch (error) {
+    console.error('获取会员状态失败:', error)
+  }
+}
 
 // 加载数据
 async function loadData() {
@@ -177,6 +200,34 @@ function formatTime(timeStr: string) {
   min-height: 100vh;
   background: linear-gradient(180deg, #FFF0F5 0%, #FFFFFF 100%);
   padding: 20rpx;
+}
+
+.vip-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 30rpx;
+  padding: 15rpx 30rpx;
+  margin: 20rpx auto 30rpx;
+  width: fit-content;
+  box-shadow: 0 4rpx 15rpx rgba(255, 165, 0, 0.3);
+}
+
+.vip-icon {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10rpx;
+  padding: 4rpx 12rpx;
+  margin-right: 15rpx;
+}
+
+.vip-text {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 500;
 }
 
 .wheel-section {

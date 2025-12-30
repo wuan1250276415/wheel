@@ -69,4 +69,16 @@ public class ContentAuditLog extends BaseEntity implements Serializable {
      */
     @TableField("audit_type")
     private Integer auditType;
+
+    /**
+     * 处理时长（毫秒）
+     */
+    @TableField("process_time")
+    private Long processTime;
+
+    /**
+     * 审核来源：WEB, MOBILE, API
+     */
+    @TableField("audit_source")
+    private String auditSource;
 }

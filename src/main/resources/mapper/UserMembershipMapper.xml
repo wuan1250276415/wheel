@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.UserMembershipMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.UserMembership">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="user_id" jdbcType="BIGINT" property="userId"/>
+        <result column="plan_id" jdbcType="BIGINT" property="planId"/>
+        <result column="tier" jdbcType="TINYINT" property="tier"/>
+        <result column="start_time" jdbcType="TIMESTAMP" property="startTime"/>
+        <result column="end_time" jdbcType="TIMESTAMP" property="endTime"/>
+        <result column="status" jdbcType="TINYINT" property="status"/>
+        <result column="auto_renew" jdbcType="TINYINT" property="autoRenew"/>
+        <result column="order_id" jdbcType="BIGINT" property="orderId"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, plan_id, tier, start_time, end_time, status, auto_renew, order_id,
+        create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <select id="selectActiveByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_membership
+        WHERE user_id = #{userId} AND status = 1
+        AND end_time > NOW()
+        ORDER BY end_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectExpiringMemberships" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_membership
+        WHERE status = 1 AND auto_renew = 1
+        AND end_time BETWEEN NOW() AND #{beforeTime}
+        ORDER BY end_time ASC
+    </select>
+
+    <update id="updateStatusByUserId">
+        UPDATE user_membership
+        SET status = #{status}, update_time = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

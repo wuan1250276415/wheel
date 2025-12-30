@@ -16,13 +16,17 @@ server:
 
 # JWT配置 (JWT_SECRET 环境变量必须配置，无默认值)
 wheel:
-  jwt:
-    secret: ${JWT_SECRET:}
-    access-token-validity-in-seconds: 1800
-    refresh-token-validity-in-seconds: 604800
 
   # 转盘配置
   wheel:
     max-daily-spins: 50
     min-spin-interval: 1000
+
+push:
+  jpush:
+    enabled: ${JPUSH_ENABLED:false}
+    app-key: ${JPUSH_APP_KEY:1d3cf04b74d8a8f293977c75}
+    master-secret: ${JPUSH_MASTER_SECRET:f37674ebde9757958e00b691}
+    title: ${JPUSH_TITLE:情侣转盘}
+    apns-production: ${JPUSH_APNS_PRODUCTION:false}
 

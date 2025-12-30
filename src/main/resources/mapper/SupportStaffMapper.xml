@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.SupportStaffMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.SupportStaff">
+        <id column="id" jdbcType="BIGINT" property="id" />
+        <result column="staff_name" jdbcType="VARCHAR" property="staffName" />
+        <result column="staff_email" jdbcType="VARCHAR" property="staffEmail" />
+        <result column="is_vip_dedicated" jdbcType="TINYINT" property="isVipDedicated" />
+        <result column="max_tickets" jdbcType="INTEGER" property="maxTickets" />
+        <result column="current_tickets" jdbcType="INTEGER" property="currentTickets" />
+        <result column="status" jdbcType="TINYINT" property="status" />
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, staff_name, staff_email, is_vip_dedicated, max_tickets, current_tickets, status,
+        create_time, update_time
+    </sql>
+
+    <!-- 查询可用的VIP专属客服 -->
+    <select id="selectAvailableVipStaff" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM support_staff
+        WHERE is_vip_dedicated = 1
+        AND status = 1
+        AND current_tickets &lt; max_tickets
+        ORDER BY current_tickets ASC
+        LIMIT 1
+    </select>
+
+    <!-- 查询可用的普通客服 -->
+    <select id="selectAvailableNormalStaff" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM support_staff
+        WHERE is_vip_dedicated = 0
+        AND status = 1
+        AND current_tickets &lt; max_tickets
+        ORDER BY current_tickets ASC
+        LIMIT 1
+    </select>
+
+    <!-- 增加客服当前工单数 -->
+    <update id="incrementCurrentTickets">
+        UPDATE support_staff
+        SET current_tickets = current_tickets + 1
+        WHERE id = #{staffId,jdbcType=BIGINT}
+    </update>
+
+    <!-- 减少客服当前工单数 -->
+    <update id="decrementCurrentTickets">
+        UPDATE support_staff
+        SET current_tickets = GREATEST(current_tickets - 1, 0)
+        WHERE id = #{staffId,jdbcType=BIGINT}
+    </update>
+</mapper>

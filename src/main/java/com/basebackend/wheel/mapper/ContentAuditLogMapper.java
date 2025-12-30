@@ -24,4 +24,14 @@ public interface ContentAuditLogMapper extends BaseMapper<ContentAuditLog> {
      */
     List<ContentAuditLog> selectByContentId(@Param("contentId") Long contentId);
 
+    /**
+     * 查询审核统计（按时间范围）
+     */
+    List<ContentAuditLog> selectAuditStatistics(@Param("startTime") String startTime, @Param("endTime") String endTime);
+
+    /**
+     * 查询审核员工作量
+     */
+    List<ContentAuditLog> selectAuditorWorkload(@Param("auditorId") Long auditorId, @Param("startTime") String startTime, @Param("endTime") String endTime);
+
 }

@@ -163,3 +163,78 @@ export function getCoupleStatistics() {
     method: 'GET'
   })
 }
+
+// ==================== 导出功能 ====================
+
+/**
+ * 导出类型
+ */
+export type ExportType = 'user' | 'trend' | 'popular' | 'category' | 'all'
+
+/**
+ * 导出参数
+ */
+export interface ExportParams {
+  type: ExportType
+  startDate?: string
+  endDate?: string
+  limit?: number
+}
+
+/**
+ * 导出统计数据为Excel
+ * GET /api/statistics/export
+ * @param params 导出参数
+ */
+export function exportStatistics(params: ExportParams) {
+  const { type, startDate, endDate, limit } = params
+
+  // 构建查询参数
+  const queryParams = new URLSearchParams({ type })
+  if (startDate) queryParams.append('startDate', startDate)
+  if (endDate) queryParams.append('endDate', endDate)
+  if (limit) queryParams.append('limit', limit.toString())
+
+  // 获取token
+  const token = uni.getStorageSync('token')
+
+  // 构建完整URL
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const url = `${baseUrl}/api/statistics/export?${queryParams.toString()}`
+
+  // 触发下载
+  return new Promise<void>((resolve, reject) => {
+    uni.downloadFile({
+      url,
+      header: {
+        'Authorization': `Bearer ${token}`
+      },
+      success: (res) => {
+        if (res.statusCode === 200) {
+          const filePath = res.tempFilePath
+          // 保存文件
+          uni.saveFile({
+            tempFilePath: filePath,
+            success: (saveRes) => {
+              uni.showToast({
+                title: '导出成功',
+                icon: 'success'
+              })
+              resolve()
+            },
+            fail: (err) => {
+              console.error('保存文件失败:', err)
+              reject(new Error('保存文件失败'))
+            }
+          })
+        } else {
+          reject(new Error('下载失败'))
+        }
+      },
+      fail: (err) => {
+        console.error('下载文件失败:', err)
+        reject(err)
+      }
+    })
+  })
+}

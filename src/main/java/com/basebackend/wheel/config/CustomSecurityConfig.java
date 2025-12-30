@@ -37,6 +37,8 @@ public class CustomSecurityConfig {
                 .requestMatchers(
                     new AntPathRequestMatcher("/api/wheel/categories"),
                     new AntPathRequestMatcher("/api/wheel/contents"),
+                    // WebSocket 端点 (SockJS 握手需要 HTTP 请求)
+                    new AntPathRequestMatcher("/ws/**"),
                     new AntPathRequestMatcher("/doc.html"),
                     new AntPathRequestMatcher("/swagger-ui/**"),
                     new AntPathRequestMatcher("/v3/api-docs/**"),

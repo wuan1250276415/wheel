@@ -20,13 +20,19 @@
       </view>
 
       <view class="couple-info">
-        <text class="couple-name">{{ partnerInfo?.nickname || '另一半' }}</text>
-        <text class="couple-status">已配对</text>
-        <text class="couple-date">配对日期：{{ formatDate(coupleInfo?.createdAt || '') }}</text>
+        <text class="couple-name">{{ status?.partnerNickname || '另一半' }}</text>
+        <text class="couple-status">{{ status?.statusText || '已配对' }}</text>
+        <text class="couple-date">配对日期：{{ formatDate(status?.createdAt || '') }}</text>
         <text class="couple-spins">共同转盘：{{ coupleSpinHistory.length }}次</text>
       </view>
 
-      <button class="break-btn" @click="showBreakConfirm">解除关系</button>
+      <view class="action-buttons">
+        <button class="chat-btn" @click="navigateToChat">
+          <text class="icon">💬</text>
+          <text>聊天</text>
+        </button>
+        <button class="break-btn" @click="showBreakConfirm">解除关系</button>
+      </view>
     </view>
 
     <!-- 待确认（已发出邀请） -->
@@ -192,6 +198,7 @@ const isValidPhone = computed(() => {
 
 // 计算属性：伴侣信息 (用于已确认状态)
 const partnerInfo = computed(() => {
+  
   if (!coupleInfo.value) return null
   
   const currentUserId = userStore.userInfo?.userId ?? userStore.userInfo?.id
@@ -403,6 +410,23 @@ function formatTime(timeStr: string) {
   if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 60 / 60 / 1000)}小时前`
   return `${date.getMonth() + 1}-${date.getDate()}`
 }
+
+// 导航到聊天页面
+function navigateToChat() {
+  if (!status.value || status.value.status !== 2) {
+    uni.showToast({ title: '获取伴侣信息失败', icon: 'none' })
+    return
+  }
+
+  const partnerId = status.value.partnerUserId
+  const nickname = status.value.partnerNickname || '对方'
+  // 仍然尝试从 partnerInfo 获取头像，因为 status 中暂时不返回头像
+  const avatar = partnerInfo.value?.avatar || ''
+
+  uni.navigateTo({
+    url: `/pages/chat/chat?partnerId=${partnerId}&nickname=${encodeURIComponent(nickname)}&avatar=${encodeURIComponent(avatar)}`
+  })
+}
 </script>
 
 <style scoped>
@@ -435,6 +459,7 @@ function formatTime(timeStr: string) {
   padding: 40rpx;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .couple-avatar {
@@ -461,6 +486,7 @@ function formatTime(timeStr: string) {
 
 .couple-info {
   flex: 1;
+  min-width: 300rpx;
 }
 
 .couple-name {
@@ -488,14 +514,43 @@ function formatTime(timeStr: string) {
   line-height: 1.5;
 }
 
+.action-buttons {
+  width: 100%;
+  display: flex;
+  gap: 15rpx;
+  margin-top: 30rpx;
+}
+
+.chat-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #1890ff, #0066cc);
+  color: white;
+  font-size: 28rpx;
+  font-weight: bold;
+  padding: 20rpx 30rpx;
+  border-radius: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  box-shadow: 0 4rpx 12rpx rgba(24, 144, 255, 0.3);
+}
+
+.chat-btn .icon {
+  font-size: 32rpx;
+}
+
+.chat-btn::after {
+  border: none;
+}
+
 .break-btn {
+  flex: 1;
   background: #f5f5f5;
   color: #999;
-  font-size: 24rpx;
-  padding: 10rpx 20rpx;
+  font-size: 28rpx;
+  padding: 20rpx 30rpx;
   border-radius: 30rpx;
-  margin-left: 20rpx;
-  line-height: 1.5;
 }
 
 .break-btn::after { border: none; }

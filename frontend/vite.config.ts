@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     uni(),
   ],
+  define: {
+    global: 'window',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

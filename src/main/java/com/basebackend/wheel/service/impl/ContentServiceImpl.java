@@ -47,6 +47,9 @@ public class ContentServiceImpl implements ContentService {
     @Autowired
     private AiAuditService aiAuditService;
 
+    @Autowired
+    private com.basebackend.wheel.util.MembershipPrivilegeHelper membershipPrivilegeHelper;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 敏感词列表（实际项目中应该从数据库或配置文件加载）
@@ -80,6 +83,9 @@ public class ContentServiceImpl implements ContentService {
         content.setCreateUserId(userId);
         content.setAuditStatus(0); // 待审核
         content.setStatus(1); // 启用
+
+        // 设置审核优先级（VIP用户优先审核）
+        content.setAuditPriority(membershipPrivilegeHelper.getAuditPriority(userId));
 
         // 处理标签
         if (submitDTO.getTags() != null && !submitDTO.getTags().isEmpty()) {
@@ -171,6 +177,9 @@ public class ContentServiceImpl implements ContentService {
         content.setAuditorId(null);
         content.setAuditedAt(null);
         content.setAuditComment(null);
+
+        // 重新设置审核优先级
+        content.setAuditPriority(membershipPrivilegeHelper.getAuditPriority(userId));
 
         // 设置更新审计字段
         AuditHelper.setUpdateAuditFields(content, userId);

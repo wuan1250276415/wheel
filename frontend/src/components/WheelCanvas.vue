@@ -1,5 +1,5 @@
 <template>
-  <view class="wheel-wrapper">
+  <view class="wheel-wrapper" :style="cssVars">
     <view class="wheel-container">
       <!-- 浪漫背景光晕 -->
       <view class="glow-bg" :class="{ 'glow-active': isVisualSpinning }"></view>
@@ -28,7 +28,7 @@
         @click="handleSpin"
         :disabled="isSpinning || isVisualSpinning "
       >
-        <view class="heart-icon">❤</view>
+        <view class="btn-icon"></view>
       </button>
     </view>
 
@@ -49,17 +49,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useWheelStore, type WheelContent } from '@/stores/wheel'
+import type { Theme } from '@/themes'
+import { defaultTheme } from '@/themes'
 
 interface Props {
   size?: number
   isSpinning?: boolean
+  theme?: Theme | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 320,
-  isSpinning: false
+  isSpinning: false,
+  theme: null
 })
 
 const emit = defineEmits<{
@@ -71,6 +75,39 @@ const wheelStore = useWheelStore()
 const result = ref<WheelContent | null>(null)
 const showResultPopup = ref(false)
 const isVisualSpinning = ref(false)
+
+// 将主题样式转换为CSS变量（使用fallback）
+const cssVars = computed(() => {
+  const theme = props.theme || defaultTheme
+  const styles = theme.styles
+  return {
+    '--wheel-bg-gradient': styles.wheelBgGradient,
+    '--wheel-border-color': styles.wheelBorderColor,
+    '--wheel-box-shadow': styles.wheelBoxShadow,
+    '--glow-bg-idle': styles.glowBgIdle,
+    '--glow-bg-active': styles.glowBgActive,
+    '--ring-outer-color': styles.ringOuterColor,
+    '--ring-inner-color': styles.ringInnerColor,
+    '--ring-inner-style': styles.ringInnerStyle || 'dotted',
+    '--ring-inner-width': styles.ringInnerWidth || '4rpx',
+    '--decorator-bg': styles.decoratorBg,
+    '--decorator-shadow': styles.decoratorShadow,
+    '--btn-bg': styles.btnBg,
+    '--btn-shadow': styles.btnShadow,
+    '--btn-icon-color': styles.btnIconColor,
+    '--btn-icon-content': `"${styles.btnIconContent}"`,
+    '--btn-icon-font-family': styles.btnIconFontFamily || 'inherit',
+    '--center-deco-text-color': styles.centerDecoTextColor,
+    '--center-deco-font-family': styles.centerDecoFontFamily,
+    '--popup-bg': styles.popupBg,
+    '--popup-card-bg': styles.popupCardBg,
+    '--popup-title-color': styles.popupTitleColor,
+    '--popup-result-text-color': styles.popupResultTextColor,
+    '--popup-result-border-color': styles.popupResultBorderColor,
+    '--popup-close-btn-bg': styles.popupCloseBtnBg,
+    '--popup-close-btn-shadow': styles.popupCloseBtnShadow
+  }
+})
 
 // 动画配置接口
 interface AnimationConfig {
@@ -141,14 +178,15 @@ defineExpose({
   width: 500rpx;
   height: 500rpx;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 182, 193, 0.4) 0%, rgba(255, 105, 180, 0) 70%);
+  background: var(--glow-bg-idle);
   filter: blur(20px);
   z-index: 1;
   animation: breathe 4s ease-in-out infinite;
+  transition: background 0.4s ease;
 }
 
 .glow-active {
-  background: radial-gradient(circle, rgba(255, 20, 147, 0.6) 0%, rgba(255, 105, 180, 0.2) 80%);
+  background: var(--glow-bg-active);
   animation: pulse-fast 1s ease-in-out infinite;
 }
 
@@ -158,17 +196,15 @@ defineExpose({
   width: 480rpx;
   height: 480rpx;
   border-radius: 50%;
-  /* 梦幻渐变背景 */
-  background: linear-gradient(135deg, #ffd1ff 0%, #fad0c4 100%);
-  box-shadow: 
-    0 10rpx 30rpx rgba(255, 182, 193, 0.4),
-    inset 0 0 40rpx rgba(255, 255, 255, 0.8);
+  background: var(--wheel-bg-gradient);
+  box-shadow: var(--wheel-box-shadow);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 5;
-  border: 4rpx solid rgba(255, 255, 255, 0.6);
+  border: 4rpx solid var(--wheel-border-color);
   animation: rotate-slow 20s linear infinite;
+  transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
 }
 
 .wheel-spinning {
@@ -179,21 +215,22 @@ defineExpose({
 .wheel-ring {
   position: absolute;
   border-radius: 50%;
-  border: 2rpx dashed rgba(255, 255, 255, 0.6);
+  transition: border-color 0.4s ease;
 }
 
 .outer-ring {
   width: 440rpx;
   height: 440rpx;
+  border: 2rpx dashed var(--ring-outer-color);
   animation: rotate-reverse 30s linear infinite;
 }
 
 .inner-ring {
   width: 300rpx;
   height: 300rpx;
-  border-style: dotted;
-  border-color: rgba(255, 255, 255, 0.8);
-  border-width: 4rpx;
+  border-style: var(--ring-inner-style);
+  border-color: var(--ring-inner-color);
+  border-width: var(--ring-inner-width);
 }
 
 /* 装饰星星 */
@@ -201,9 +238,10 @@ defineExpose({
   position: absolute;
   width: 10rpx;
   height: 10rpx;
-  background: white;
+  background: var(--decorator-bg);
   border-radius: 50%;
-  box-shadow: 0 0 10rpx white;
+  box-shadow: var(--decorator-shadow);
+  transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 .star-1 { top: 40rpx; left: 50%; }
 .star-2 { bottom: 40rpx; left: 50%; }
@@ -215,18 +253,20 @@ defineExpose({
   width: 200rpx;
   height: 200rpx;
   border-radius: 50%;
-  border: 2rpx solid rgba(255, 255, 255, 0.4);
+  border: 2rpx solid var(--wheel-border-color);
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: border-color 0.4s ease;
 }
 
 .decoration-text {
   font-size: 24rpx;
-  color: #fff;
+  color: var(--center-deco-text-color);
   letter-spacing: 4rpx;
   opacity: 0.8;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--center-deco-font-family);
+  transition: color 0.4s ease;
 }
 
 /* 按钮 - 悬浮在最上层 */
@@ -238,9 +278,9 @@ defineExpose({
   width: 140rpx;
   height: 140rpx;
   border-radius: 50%;
-  background: white;
+  background: var(--btn-bg);
   border: none;
-  box-shadow: 0 8rpx 20rpx rgba(255, 105, 180, 0.3);
+  box-shadow: var(--btn-shadow);
   z-index: 10;
   display: flex;
   justify-content: center;
@@ -254,13 +294,18 @@ defineExpose({
 
 .btn-disabled {
   opacity: 0.8;
-  /* pointer-events: none; */
 }
 
-.heart-icon {
+.btn-icon {
   font-size: 48rpx;
-  color: #ff69b4;
+  color: var(--btn-icon-color);
   animation: heartbeat 1.5s ease-in-out infinite;
+  transition: color 0.4s ease;
+  font-family: var(--btn-icon-font-family);
+}
+
+.btn-icon::before {
+  content: var(--btn-icon-content);
 }
 
 /* 结果弹窗 */
@@ -270,7 +315,7 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--popup-bg);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -280,7 +325,7 @@ defineExpose({
 }
 
 .result-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--popup-card-bg);
   border-radius: 40rpx;
   padding: 60rpx 50rpx;
   width: 80%;
@@ -290,6 +335,7 @@ defineExpose({
   align-items: center;
   box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.1);
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.4s ease;
 }
 
 .card-header {
@@ -301,37 +347,41 @@ defineExpose({
 
 .result-title {
   font-size: 32rpx;
-  color: #888;
+  color: var(--popup-title-color);
   margin-bottom: 40rpx;
   letter-spacing: 2rpx;
+  transition: color 0.4s ease;
 }
 
 .result-content-box {
   margin-bottom: 50rpx;
   padding: 20rpx;
-  border-bottom: 2rpx solid #ffe4e1;
+  border-bottom: 2rpx solid var(--popup-result-border-color);
   width: 100%;
   text-align: center;
+  transition: border-color 0.4s ease;
 }
 
 .result-text {
   font-size: 44rpx;
   font-weight: bold;
-  color: #d63384; 
+  color: var(--popup-result-text-color);
   line-height: 1.4;
+  transition: color 0.4s ease;
 }
 
 .result-close-btn {
   width: 100%;
   height: 90rpx;
-  background: linear-gradient(135deg, #ff9a9e 0%, #ff6a88 100%);
+  background: var(--popup-close-btn-bg);
   color: white;
   border-radius: 45rpx;
   font-size: 32rpx;
   font-weight: 500;
   letter-spacing: 4rpx;
   border: none;
-  box-shadow: 0 10rpx 20rpx rgba(255, 106, 136, 0.3);
+  box-shadow: var(--popup-close-btn-shadow);
+  transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 
 /* 动画关键帧 */

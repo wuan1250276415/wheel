@@ -2,7 +2,17 @@
   <view class="container">
     <!-- 用户统计卡片 -->
     <view class="stats-card">
-      <view class="card-title">我的数据</view>
+      <view class="card-header">
+        <view class="card-title">我的数据</view>
+        <button
+          v-if="hasAdvancedStats"
+          class="export-btn-mini"
+          :disabled="isExporting"
+          @click="exportUserStats"
+        >
+          {{ isExporting ? '导出中...' : '📥 导出' }}
+        </button>
+      </view>
 
       <view class="stats-grid">
         <view class="stat-item">
@@ -37,27 +47,63 @@
       </view>
     </view>
 
+    <!-- VIP升级提示 -->
+    <view class="upgrade-prompt" v-if="!hasAdvancedStats">
+      <view class="prompt-icon">👑</view>
+      <text class="prompt-title">升级VIP解锁全部统计维度</text>
+      <view class="feature-list">
+        <view class="feature-item">
+          <text class="feature-icon">📈</text>
+          <text class="feature-text">转盘使用趋势图表</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🔥</text>
+          <text class="feature-text">热门内容排行</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">📊</text>
+          <text class="feature-text">分类统计分析</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">📥</text>
+          <text class="feature-text">数据导出功能</text>
+        </view>
+      </view>
+      <button class="upgrade-btn" @click="goToMembership">立即开通VIP</button>
+    </view>
+
     <!-- 转盘使用趋势 -->
-    <view class="trend-section">
-      <view class="section-title">
-        <text>转盘使用趋势</text>
-        <picker
-          mode="date"
-          :value="trendDateRange.start"
-          @change="onStartDateChange"
-          class="date-picker"
-        >
-          <text class="date-text">{{ trendDateRange.start }}</text>
-        </picker>
-        <text class="date-separator">至</text>
-        <picker
-          mode="date"
-          :value="trendDateRange.end"
-          @change="onEndDateChange"
-          class="date-picker"
-        >
-          <text class="date-text">{{ trendDateRange.end }}</text>
-        </picker>
+    <view class="trend-section" v-if="hasAdvancedStats">
+      <view class="section-header">
+        <view class="section-title">
+          <text>转盘使用趋势</text>
+        </view>
+        <view class="section-actions">
+          <picker
+            mode="date"
+            :value="trendDateRange.start"
+            @change="onStartDateChange"
+            class="date-picker"
+          >
+            <text class="date-text">{{ trendDateRange.start }}</text>
+          </picker>
+          <text class="date-separator">至</text>
+          <picker
+            mode="date"
+            :value="trendDateRange.end"
+            @change="onEndDateChange"
+            class="date-picker"
+          >
+            <text class="date-text">{{ trendDateRange.end }}</text>
+          </picker>
+          <button
+            class="export-btn-mini"
+            :disabled="isExporting"
+            @click="exportTrend"
+          >
+            {{ isExporting ? '导出中...' : '📥' }}
+          </button>
+        </view>
       </view>
 
       <view class="trend-chart">
@@ -96,9 +142,18 @@
     </view>
 
     <!-- 热门内容 -->
-    <view class="popular-section">
-      <view class="section-title">
-        <text>热门内容 TOP10</text>
+    <view class="popular-section" v-if="hasAdvancedStats">
+      <view class="section-header">
+        <view class="section-title">
+          <text>热门内容 TOP10</text>
+        </view>
+        <button
+          class="export-btn-mini"
+          :disabled="isExporting"
+          @click="exportPopular"
+        >
+          {{ isExporting ? '导出中...' : '📥 导出' }}
+        </button>
       </view>
 
       <view class="popular-list">
@@ -121,9 +176,18 @@
     </view>
 
     <!-- 分类统计 -->
-    <view class="category-section">
-      <view class="section-title">
-        <text>分类统计</text>
+    <view class="category-section" v-if="hasAdvancedStats">
+      <view class="section-header">
+        <view class="section-title">
+          <text>分类统计</text>
+        </view>
+        <button
+          class="export-btn-mini"
+          :disabled="isExporting"
+          @click="exportCategory"
+        >
+          {{ isExporting ? '导出中...' : '📥 导出' }}
+        </button>
       </view>
 
       <view class="category-list">
@@ -144,21 +208,42 @@
         </view>
       </view>
     </view>
+
+    <!-- 综合导出按钮 -->
+    <view class="export-all-section" v-if="hasAdvancedStats">
+      <button
+        class="export-all-btn"
+        :disabled="isExporting"
+        @click="exportAll"
+      >
+        {{ isExporting ? '导出中...' : '📊 导出综合报表（全部数据）' }}
+      </button>
+      <text class="export-tip">综合报表包含：用户统计、转盘趋势、热门内容、分类统计</text>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import * as statisticsApi from '@/api/statistics'
+import { membershipAPI } from '@/api/membership'
+import type { MembershipStatusVO } from '@/types/api'
 
 const userStats = ref<any>({})
 const spinTrend = ref<any[]>([])
 const popularContent = ref<any[]>([])
 const categoryStats = ref<any[]>([])
+const membershipStatus = ref<MembershipStatusVO | null>(null)
+const isExporting = ref(false)
 
 const trendDateRange = ref({
   start: getDateString(-7),
   end: getDateString(0)
+})
+
+// VIP权益检查
+const hasAdvancedStats = computed(() => {
+  return membershipStatus.value && membershipStatus.value.tier >= 1
 })
 
 // 计算最大值（用于图表显示）
@@ -171,31 +256,48 @@ const maxUserCount = computed(() => {
 })
 
 // 页面加载
-onMounted(() => {
+onMounted(async () => {
+  await loadMembershipStatus()
   loadData()
 })
+
+// 加载会员状态
+async function loadMembershipStatus() {
+  try {
+    membershipStatus.value = await membershipAPI.getMembershipStatus()
+  } catch (error) {
+    console.error('获取会员状态失败:', error)
+  }
+}
 
 // 加载数据
 async function loadData() {
   try {
-    // 并行加载所有数据
-    const [userRes, trendRes, popularRes, categoryRes] = await Promise.all([
-      statisticsApi.getUserStatistics(),
-      statisticsApi.getSpinTrend(trendDateRange.value.start, trendDateRange.value.end),
-      statisticsApi.getPopularContent({ limit: 10 }),
-      statisticsApi.getCategoryStatistics()
-    ])
-
+    // 用户统计所有人都可以访问
+    const userRes = await statisticsApi.getUserStatistics()
     userStats.value = userRes || {}
-    spinTrend.value = trendRes || []
-    popularContent.value = popularRes || []
-    categoryStats.value = categoryRes || []
-  } catch (error) {
+
+    // 高级统计需要VIP权益
+    if (hasAdvancedStats.value) {
+      const [trendRes, popularRes, categoryRes] = await Promise.all([
+        statisticsApi.getSpinTrend(trendDateRange.value.start, trendDateRange.value.end),
+        statisticsApi.getPopularContent({ limit: 10 }),
+        statisticsApi.getCategoryStatistics()
+      ])
+
+      spinTrend.value = trendRes || []
+      popularContent.value = popularRes || []
+      categoryStats.value = categoryRes || []
+    }
+  } catch (error: any) {
     console.error('加载统计数据失败:', error)
-    uni.showToast({
-      title: '加载失败',
-      icon: 'none'
-    })
+    // 如果是权限错误，不显示toast
+    if (error.message && !error.message.includes('VIP')) {
+      uni.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
+    }
   }
 }
 
@@ -219,6 +321,13 @@ function getDateString(offset: number) {
   return date.toISOString().split('T')[0]
 }
 
+// 跳转到会员页面
+function goToMembership() {
+  uni.navigateTo({
+    url: '/pages/membership/membership'
+  })
+}
+
 // 开始日期变化
 function onStartDateChange(e: any) {
   trendDateRange.value.start = e.detail.value
@@ -240,6 +349,106 @@ async function loadTrendData() {
     console.error('加载趋势数据失败:', error)
   }
 }
+
+// 导出用户统计
+async function exportUserStats() {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await statisticsApi.exportStatistics({
+      type: 'user'
+    })
+  } catch (error: any) {
+    console.error('导出用户统计失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'none'
+    })
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// 导出转盘趋势
+async function exportTrend() {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await statisticsApi.exportStatistics({
+      type: 'trend',
+      startDate: trendDateRange.value.start,
+      endDate: trendDateRange.value.end
+    })
+  } catch (error: any) {
+    console.error('导出转盘趋势失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'none'
+    })
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// 导出热门内容
+async function exportPopular() {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await statisticsApi.exportStatistics({
+      type: 'popular',
+      limit: 10
+    })
+  } catch (error: any) {
+    console.error('导出热门内容失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'none'
+    })
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// 导出分类统计
+async function exportCategory() {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await statisticsApi.exportStatistics({
+      type: 'category'
+    })
+  } catch (error: any) {
+    console.error('导出分类统计失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'none'
+    })
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// 导出综合报表
+async function exportAll() {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await statisticsApi.exportStatistics({
+      type: 'all',
+      startDate: trendDateRange.value.start,
+      endDate: trendDateRange.value.end
+    })
+  } catch (error: any) {
+    console.error('导出综合报表失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'none'
+    })
+  } finally {
+    isExporting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -257,11 +466,17 @@ async function loadTrendData() {
   margin-bottom: 30rpx;
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
 .card-title {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
-  margin-bottom: 30rpx;
 }
 
 .stats-grid {
@@ -288,6 +503,79 @@ async function loadTrendData() {
   color: #999;
 }
 
+.upgrade-prompt {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 20rpx;
+  padding: 40rpx 30rpx;
+  box-shadow: 0 4rpx 15rpx rgba(255, 165, 0, 0.3);
+  margin-bottom: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.prompt-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.prompt-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 30rpx;
+}
+
+.feature-list {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15rpx;
+  padding: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  padding: 15rpx 0;
+}
+
+.feature-icon {
+  font-size: 32rpx;
+  margin-right: 15rpx;
+}
+
+.feature-text {
+  font-size: 28rpx;
+  color: #fff;
+}
+
+.upgrade-btn {
+  width: 100%;
+  height: 80rpx;
+  background: #fff;
+  color: #FF8C00;
+  border: none;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+}
+
+/* 导出按钮 */
+.export-btn-mini {
+  padding: 10rpx 20rpx;
+  background: linear-gradient(135deg, #FF69B4, #FF1493);
+  color: #fff;
+  border: none;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.export-btn-mini[disabled] {
+  opacity: 0.6;
+}
+
 .trend-section {
   background: #fff;
   border-radius: 20rpx;
@@ -296,17 +584,23 @@ async function loadTrendData() {
   margin-bottom: 30rpx;
 }
 
-.section-title {
+.section-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
   margin-bottom: 30rpx;
 }
 
-.date-picker {
-  margin-left: auto;
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
 }
 
 .date-text {
@@ -510,5 +804,41 @@ async function loadTrendData() {
 .user-count {
   font-size: 26rpx;
   color: #FF1493;
+}
+
+/* 综合导出区域 */
+.export-all-section {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
+  margin-bottom: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.export-all-btn {
+  width: 100%;
+  height: 90rpx;
+  background: linear-gradient(135deg, #FF69B4, #FF1493);
+  color: #fff;
+  border: none;
+  border-radius: 45rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  box-shadow: 0 8rpx 20rpx rgba(255, 105, 180, 0.3);
+}
+
+.export-all-btn[disabled] {
+  opacity: 0.6;
+}
+
+.export-tip {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  line-height: 1.6;
 }
 </style>

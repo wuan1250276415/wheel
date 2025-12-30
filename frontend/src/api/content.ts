@@ -12,7 +12,7 @@ export interface ContentSubmitDTO {
 
 // 内容实体
 export interface WheelContent {
-  id: number
+  id: string | number
   contentText: string
   categoryId: number
   categoryName?: string

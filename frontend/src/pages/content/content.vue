@@ -231,6 +231,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useContentStore } from '@/stores/content'
 import { useWheelStore } from '@/stores/wheel'
 import type { WheelContent, ContentSubmitDTO } from '@/api/content'
+import { membershipAPI } from '@/api/membership'
+import type { MembershipStatusVO } from '@/types/api'
 
 const contentStore = useContentStore()
 const wheelStore = useWheelStore()
@@ -244,6 +246,7 @@ const editingId = ref<number | null>(null)
 const isSubmitting = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref<WheelContent | null>(null)
+const membershipStatus = ref<MembershipStatusVO | null>(null)
 
 // 表单数据
 const formData = ref<ContentSubmitDTO>({
@@ -283,7 +286,17 @@ const filteredContents = computed(() => {
 // 页面加载
 onMounted(async () => {
   await loadData()
+  await loadMembershipStatus()
 })
+
+// 加载会员状态
+async function loadMembershipStatus() {
+  try {
+    membershipStatus.value = await membershipAPI.getMembershipStatus()
+  } catch (error) {
+    console.error('获取会员状态失败:', error)
+  }
+}
 
 // 加载数据
 async function loadData() {
@@ -447,9 +460,22 @@ async function submitForm() {
     }
 
     if (res.success) {
+      // 根据会员等级显示不同的提示消息
+      let successMessage = isEditing.value ? '更新成功' : '提交成功'
+
+      if (!isEditing.value && membershipStatus.value) {
+        const tier = membershipStatus.value.tier
+        if (tier >= 2) {
+          successMessage += '！SVIP用户，您的内容将被优先审核'
+        } else if (tier >= 1) {
+          successMessage += '！VIP用户，您的内容将获得优先处理'
+        }
+      }
+
       uni.showToast({
-        title: isEditing.value ? '更新成功' : '提交成功',
-        icon: 'success'
+        title: successMessage,
+        icon: 'success',
+        duration: 2500
       })
       closeModal()
     } else {

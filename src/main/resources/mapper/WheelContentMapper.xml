@@ -13,6 +13,7 @@
     <result column="auditor_id" jdbcType="BIGINT" property="auditorId" />
     <result column="audited_at" jdbcType="TIMESTAMP" property="auditedAt" />
     <result column="audit_comment" jdbcType="LONGVARCHAR" property="auditComment" />
+    <result column="audit_priority" jdbcType="INTEGER" property="auditPriority" />
     <result column="tags" jdbcType="VARCHAR" property="tags" />
     <result column="is_system" jdbcType="BOOLEAN" property="isSystem" />
     <result column="status" jdbcType="BOOLEAN" property="status" />
@@ -24,8 +25,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, category_id, content_text, weight, create_user_id, audit_status, auditor_id, 
-    audited_at, audit_comment, tags, is_system, `status`, create_time, update_time,
+    id, category_id, content_text, weight, create_user_id, audit_status, auditor_id,
+    audited_at, audit_comment, audit_priority, tags, is_system, `status`, create_time, update_time,
     create_by, update_by, deleted
   </sql>
 
@@ -72,5 +73,27 @@
         AND audit_status = #{auditStatus,jdbcType=TINYINT}
         AND status != 2
         ORDER BY category_id, create_time DESC
+    </select>
+
+    <!-- 查询审核队列（按优先级降序，创建时间升序） -->
+    <select id="selectAuditQueue" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_content
+        WHERE audit_status = 0
+        AND status != 2
+        ORDER BY audit_priority DESC, create_time ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset,jdbcType=INTEGER}, #{limit,jdbcType=INTEGER}
+        </if>
+    </select>
+
+    <!-- 统计指定审核状态和优先级的内容数量 -->
+    <select id="countByAuditStatusAndPriority" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM wheel_content
+        WHERE audit_status = #{auditStatus,jdbcType=TINYINT}
+        AND audit_priority = #{auditPriority,jdbcType=INTEGER}
+        AND status != 2
     </select>
 </mapper>

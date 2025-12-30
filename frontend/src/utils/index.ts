@@ -3,9 +3,9 @@
  */
 
 /**
- * 格式化时间
+ * 格式化时间 (相对时间)
  */
-export function formatTime(time: string | Date): string {
+export function formatRelativeTime(time: string | Date): string {
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
@@ -26,6 +26,11 @@ export function formatTime(time: string | Date): string {
     })
   }
 }
+
+/**
+ * 格式化时间 (别名，为了兼容旧代码)
+ */
+export const formatTime = formatRelativeTime
 
 /**
  * 格式化日期

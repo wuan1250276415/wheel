@@ -6,11 +6,14 @@
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="content_id" property="contentId" jdbcType="BIGINT"/>
         <result column="submit_user_id" property="submitUserId" jdbcType="BIGINT"/>
+        <result column="auditor_id" property="auditorId" jdbcType="BIGINT"/>
         <result column="audit_type" property="auditType" jdbcType="TINYINT"/>
         <result column="audit_status" property="auditStatus" jdbcType="TINYINT"/>
         <result column="audit_comment" property="auditComment" jdbcType="VARCHAR"/>
         <result column="ai_audit_result" property="aiAuditResult" jdbcType="VARCHAR"/>
         <result column="audited_at" property="auditedAt" jdbcType="TIMESTAMP"/>
+        <result column="process_time" property="processTime" jdbcType="BIGINT"/>
+        <result column="audit_source" property="auditSource" jdbcType="VARCHAR"/>
         <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
         <result column="create_by" property="createBy" jdbcType="BIGINT"/>
         <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
@@ -18,8 +21,8 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, content_id, submit_user_id, audit_type, audit_status, audit_comment,
-        ai_audit_result, audited_at, create_time, create_by, update_time, update_by
+        id, content_id, submit_user_id, auditor_id, audit_type, audit_status, audit_comment,
+        ai_audit_result, audited_at, process_time, audit_source, create_time, create_by, update_time, update_by
     </sql>
 
     <!-- 根据内容ID查询审核日志 -->
@@ -83,4 +86,37 @@
             )
         </foreach>
     </insert>
+
+    <!-- 查询审核统计 -->
+    <select id="selectAuditStatistics" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        WHERE 1=1
+        <if test="startTime != null">
+            AND audited_at >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND audited_at &lt;= #{endTime}
+        </if>
+        ORDER BY audited_at DESC
+    </select>
+
+    <!-- 查询审核员工作量 -->
+    <select id="selectAuditorWorkload" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        WHERE 1=1
+        <if test="auditorId != null">
+            AND auditor_id = #{auditorId}
+        </if>
+        <if test="startTime != null">
+            AND audited_at >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND audited_at &lt;= #{endTime}
+        </if>
+        ORDER BY audited_at DESC
+    </select>
 </mapper>

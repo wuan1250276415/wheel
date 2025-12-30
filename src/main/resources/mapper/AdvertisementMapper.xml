@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.AdvertisementMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.Advertisement">
+        <id column="id" jdbcType="BIGINT" property="id" />
+        <result column="ad_name" jdbcType="VARCHAR" property="adName" />
+        <result column="placement_id" jdbcType="BIGINT" property="placementId" />
+        <result column="ad_type" jdbcType="TINYINT" property="adType" />
+        <result column="content_url" jdbcType="VARCHAR" property="contentUrl" />
+        <result column="content_text" jdbcType="VARCHAR" property="contentText" />
+        <result column="link_url" jdbcType="VARCHAR" property="linkUrl" />
+        <result column="priority" jdbcType="INTEGER" property="priority" />
+        <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+        <result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
+        <result column="status" jdbcType="TINYINT" property="status" />
+        <result column="impression_count" jdbcType="BIGINT" property="impressionCount" />
+        <result column="click_count" jdbcType="BIGINT" property="clickCount" />
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+        <result column="create_by" jdbcType="BIGINT" property="createBy" />
+        <result column="update_by" jdbcType="BIGINT" property="updateBy" />
+        <result column="deleted" jdbcType="BOOLEAN" property="deleted" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, ad_name, placement_id, ad_type, content_url, content_text, link_url, priority,
+        start_time, end_time, status, impression_count, click_count, create_time, update_time,
+        create_by, update_by, deleted
+    </sql>
+
+    <!-- 根据广告位查询有效广告 -->
+    <select id="selectActiveAdsByPlacement" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM advertisement a
+        INNER JOIN ad_placement p ON a.placement_id = p.id
+        WHERE p.placement_key = #{placementKey,jdbcType=VARCHAR}
+        AND a.status = 1
+        AND a.deleted = 0
+        AND (a.start_time IS NULL OR a.start_time &lt;= NOW())
+        AND (a.end_time IS NULL OR a.end_time &gt;= NOW())
+        ORDER BY a.priority DESC, a.create_time DESC
+        <if test="limit != null">
+            LIMIT #{limit,jdbcType=INTEGER}
+        </if>
+    </select>
+</mapper>

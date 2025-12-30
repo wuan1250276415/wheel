@@ -62,6 +62,9 @@ public class WheelSpinServiceImpl implements WheelSpinService {
     @Autowired
     private StatisticsService statisticsService;
 
+    @Autowired
+    private com.basebackend.wheel.util.MembershipPrivilegeHelper membershipPrivilegeHelper;
+
     @Value("${wheel.wheel.max-daily-spins:50}")
     private int maxDailySpins;
 
@@ -110,11 +113,14 @@ public class WheelSpinServiceImpl implements WheelSpinService {
             deviceId = "user-" + userId;
         }
 
-        // 2. 防作弊验证
-        AntiCheatService.ValidationResult frequencyResult = antiCheatService.validateSpinFrequency(userId, ipAddress,
-                deviceId);
-        if (!frequencyResult.isValid()) {
-            throw new BusinessException(frequencyResult.getMessage());
+        // 2. 防作弊验证（VIP及以上会员跳过频率限制）
+        boolean hasUnlimitedSpins = membershipPrivilegeHelper.hasUnlimitedSpins(userId);
+        if (!hasUnlimitedSpins) {
+            AntiCheatService.ValidationResult frequencyResult = antiCheatService.validateSpinFrequency(userId, ipAddress,
+                    deviceId);
+            if (!frequencyResult.isValid()) {
+                throw new BusinessException(frequencyResult.getMessage());
+            }
         }
 
         AntiCheatService.ValidationResult ipResult = antiCheatService.validateIpAddress(userId, ipAddress);

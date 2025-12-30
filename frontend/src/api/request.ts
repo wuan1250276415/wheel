@@ -465,4 +465,20 @@ export function requestWithRetryConfirm<T = any>(options: RequestConfig): Promis
   })
 }
 
-export default request
+const requestUtil = Object.assign(request, {
+  request,
+  get: <T = any>(url: string, options?: Omit<RequestConfig, 'url' | 'method'>) => {
+    return request<T>({ ...options, url, method: 'GET' })
+  },
+  post: <T = any>(url: string, data?: any, options?: Omit<RequestConfig, 'url' | 'method' | 'data'>) => {
+    return request<T>({ ...options, url, data, method: 'POST' })
+  },
+  put: <T = any>(url: string, data?: any, options?: Omit<RequestConfig, 'url' | 'method' | 'data'>) => {
+    return request<T>({ ...options, url, data, method: 'PUT' })
+  },
+  delete: <T = any>(url: string, data?: any, options?: Omit<RequestConfig, 'url' | 'method' | 'data'>) => {
+    return request<T>({ ...options, url, data, method: 'DELETE' })
+  }
+})
+
+export default requestUtil

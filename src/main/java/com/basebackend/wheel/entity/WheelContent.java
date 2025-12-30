@@ -73,6 +73,12 @@ public class WheelContent extends BaseEntity implements Serializable {
     private String auditComment;
 
     /**
+     * 审核优先级：1-普通，2-VIP，3-SVIP
+     */
+    @TableField(value = "audit_priority")
+    private Integer auditPriority;
+
+    /**
      * 标签（JSON）
      */
     @TableField(value = "tags")

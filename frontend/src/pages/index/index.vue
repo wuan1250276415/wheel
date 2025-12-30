@@ -18,6 +18,9 @@
       </view>
     </view>
 
+    <!-- 广告横幅 -->
+    <AdBanner placement-key="home_banner" />
+
     <!-- 快速操作 -->
     <view class="quick-actions">
       <view class="action-card" @click="navigateTo('/pages/wheel/wheel')">
@@ -89,6 +92,7 @@ import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useWheelStore } from '@/stores/wheel'
 import * as statisticsApi from '@/api/statistics'
+import AdBanner from '@/components/AdBanner.vue'
 import * as coupleApi from '@/api/couple'
 
 const userStore = useUserStore()

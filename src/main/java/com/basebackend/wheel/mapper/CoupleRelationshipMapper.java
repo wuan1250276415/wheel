@@ -44,4 +44,13 @@ public interface CoupleRelationshipMapper extends BaseMapper<CoupleRelationship>
      * @return 已确认的关系
      */
     CoupleRelationship selectConfirmedByUserId(@Param("userId") Long userId);
+
+    /**
+     * 根据双方用户ID查询情侣关系ID
+     *
+     * @param userId1 用户ID1
+     * @param userId2 用户ID2
+     * @return 情侣关系ID
+     */
+    Long findCoupleIdByUserIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 }

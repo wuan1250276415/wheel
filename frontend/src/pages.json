@@ -62,6 +62,63 @@
         "navigationBarTextStyle": "white",
         "backgroundColor": "#FFF0F5"
       }
+    },
+    {
+      "path": "pages/chat/chat",
+      "style": {
+        "navigationBarTitleText": "聊天",
+        "navigationBarBackgroundColor": "#FF69B4",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#FFF0F5"
+      }
+    },
+    {
+      "path": "pages/moment/moment",
+      "style": {
+        "navigationBarTitleText": "情侣动态",
+        "navigationBarBackgroundColor": "#FF69B4",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#FFF0F5"
+      }
+    },
+    {
+      "path": "pages/moment/create",
+      "style": {
+        "navigationBarTitleText": "发布动态"
+      }
+    },
+    {
+      "path": "pages/moment/edit",
+      "style": {
+        "navigationBarTitleText": "编辑动态"
+      }
+    },
+    {
+      "path": "pages/task/task",
+      "style": {
+        "navigationBarTitleText": "任务挑战",
+        "navigationBarBackgroundColor": "#667eea",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#f5f5f5"
+      }
+    },
+    {
+      "path": "pages/achievement/achievement",
+      "style": {
+        "navigationBarTitleText": "成就墙",
+        "navigationBarBackgroundColor": "#9b59b6",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#f5f5f5"
+      }
+    },
+    {
+      "path": "pages/membership/membership",
+      "style": {
+        "navigationBarTitleText": "会员订阅",
+        "navigationBarBackgroundColor": "#667eea",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#f5f5f5"
+      }
     }
   ],
   "tabBar": {

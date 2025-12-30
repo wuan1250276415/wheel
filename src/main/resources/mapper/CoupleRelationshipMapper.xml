@@ -62,4 +62,17 @@
         WHERE (user_id_1 = #{userId,jdbcType=BIGINT} OR user_id_2 = #{userId,jdbcType=BIGINT})
         AND status = 1
     </select>
+
+    <!-- 根据双方用户ID查询情侣关系ID -->
+    <select id="findCoupleIdByUserIds" resultType="java.lang.Long">
+        SELECT id
+        FROM couple_relationship
+        WHERE (
+            (user_id_1 = #{userId1,jdbcType=BIGINT} AND user_id_2 = #{userId2,jdbcType=BIGINT})
+            OR
+            (user_id_1 = #{userId2,jdbcType=BIGINT} AND user_id_2 = #{userId1,jdbcType=BIGINT})
+        )
+        AND status = 1
+        LIMIT 1
+    </select>
 </mapper>

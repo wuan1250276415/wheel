@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.PaymentOrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.PaymentOrder">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="order_no" jdbcType="VARCHAR" property="orderNo"/>
+        <result column="user_id" jdbcType="BIGINT" property="userId"/>
+        <result column="plan_id" jdbcType="BIGINT" property="planId"/>
+        <result column="amount" jdbcType="DECIMAL" property="amount"/>
+        <result column="payment_method" jdbcType="TINYINT" property="paymentMethod"/>
+        <result column="payment_status" jdbcType="TINYINT" property="paymentStatus"/>
+        <result column="trade_no" jdbcType="VARCHAR" property="tradeNo"/>
+        <result column="paid_at" jdbcType="TIMESTAMP" property="paidAt"/>
+        <result column="refunded_at" jdbcType="TIMESTAMP" property="refundedAt"/>
+        <result column="refund_reason" jdbcType="VARCHAR" property="refundReason"/>
+        <result column="callback_data" jdbcType="VARCHAR" property="callbackData"/>
+        <result column="remark" jdbcType="VARCHAR" property="remark"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_no, user_id, plan_id, amount, payment_method, payment_status, trade_no,
+        paid_at, refunded_at, refund_reason, callback_data, remark,
+        create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <select id="selectByOrderNo" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM payment_order
+        WHERE order_no = #{orderNo}
+        LIMIT 1
+    </select>
+
+    <update id="updatePaymentStatus">
+        UPDATE payment_order
+        SET payment_status = #{paymentStatus}, update_time = NOW()
+        WHERE order_no = #{orderNo}
+    </update>
+
+</mapper>

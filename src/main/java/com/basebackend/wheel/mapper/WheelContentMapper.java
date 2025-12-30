@@ -47,4 +47,28 @@ public interface WheelContentMapper extends BaseMapper<WheelContent> {
             @Param("categoryIds") List<Long> categoryIds,
             @Param("auditStatus") Integer auditStatus
     );
+
+    /**
+     * 查询审核队列（按优先级降序，创建时间升序）
+     *
+     * @param offset   偏移量
+     * @param limit    限制数量
+     * @return 待审核内容列表
+     */
+    List<WheelContent> selectAuditQueue(
+            @Param("offset") Integer offset,
+            @Param("limit") Integer limit
+    );
+
+    /**
+     * 统计指定审核状态和优先级的内容数量
+     *
+     * @param auditStatus   审核状态
+     * @param auditPriority 审核优先级
+     * @return 内容数量
+     */
+    Integer countByAuditStatusAndPriority(
+            @Param("auditStatus") Integer auditStatus,
+            @Param("auditPriority") Integer auditPriority
+    );
 }
