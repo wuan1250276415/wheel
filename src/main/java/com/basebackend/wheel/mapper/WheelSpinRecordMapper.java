@@ -36,5 +36,41 @@ public interface WheelSpinRecordMapper extends BaseMapper<WheelSpinRecord> {
             @Param("date") LocalDateTime date
     );
 
+    /**
+     * 统计内容的转盘次数
+     *
+     * @param contentId 内容ID
+     * @return 转盘次数
+     */
+    int countByContentId(@Param("contentId") Long contentId);
 
+    /**
+     * 统计内容在指定时间范围内的转盘次数
+     *
+     * @param contentId 内容ID
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @return 转盘次数
+     */
+    int countByContentIdInRange(
+            @Param("contentId") Long contentId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
+    /**
+     * 批量统计内容的转盘次数
+     *
+     * @param contentIds 内容ID列表
+     * @return 内容ID和转盘次数的映射列表
+     */
+    List<java.util.Map<String, Object>> batchCountByContentIds(@Param("contentIds") List<Long> contentIds);
+
+    /**
+     * 获取内容最近一次被转到的时间
+     *
+     * @param contentId 内容ID
+     * @return 最近转盘时间
+     */
+    LocalDateTime getLastSpinTimeByContentId(@Param("contentId") Long contentId);
 }

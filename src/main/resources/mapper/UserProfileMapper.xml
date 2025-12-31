@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.UserProfileMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.UserProfile">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="user_id" jdbcType="BIGINT" property="userId"/>
+        <result column="favorite_categories" jdbcType="VARCHAR" property="favoriteCategories"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="active_time_slots" jdbcType="VARCHAR" property="activeTimeSlots"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="behavior_tags" jdbcType="VARCHAR" property="behaviorTags"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="total_spins" jdbcType="INTEGER" property="totalSpins"/>
+        <result column="last_active_time" jdbcType="TIMESTAMP" property="lastActiveTime"/>
+        <result column="is_stale" jdbcType="BOOLEAN" property="isStale"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="BOOLEAN" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, favorite_categories, active_time_slots, behavior_tags, total_spins,
+        last_active_time, is_stale, create_time, create_by, update_time, update_by, deleted
+    </sql>
+
+    <!-- 根据用户ID查询画像 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_profile
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
+    <!-- 查询过期的用户画像列表 -->
+    <select id="selectStaleProfiles" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_profile
+        WHERE (is_stale = 1 OR last_active_time &lt; #{staleThreshold,jdbcType=TIMESTAMP})
+        AND deleted = 0
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+
+    <!-- 批量更新画像过期状态 -->
+    <update id="batchMarkStale">
+        UPDATE user_profile
+        SET is_stale = 1,
+            update_time = NOW()
+        WHERE last_active_time &lt; #{staleThreshold,jdbcType=TIMESTAMP}
+        AND is_stale = 0
+        AND deleted = 0
+    </update>
+
+    <!-- 更新用户画像的活跃时间和转盘次数 -->
+    <update id="updateActivityInfo">
+        UPDATE user_profile
+        SET last_active_time = #{lastActiveTime,jdbcType=TIMESTAMP},
+            total_spins = total_spins + 1,
+            is_stale = 0,
+            update_time = NOW()
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND deleted = 0
+    </update>
+
+    <!-- 统计用户在指定时间范围内各分类的转盘次数 -->
+    <select id="selectCategorySpinStats" resultType="java.util.Map">
+        SELECT 
+            category_id AS categoryId,
+            COUNT(*) AS spinCount
+        FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND spin_time BETWEEN #{startTime,jdbcType=TIMESTAMP} AND #{endTime,jdbcType=TIMESTAMP}
+        AND deleted = 0
+        GROUP BY category_id
+        ORDER BY spinCount DESC
+    </select>
+
+    <!-- 统计用户在指定时间范围内各小时的转盘次数 -->
+    <select id="selectHourlySpinStats" resultType="java.util.Map">
+        SELECT 
+            HOUR(spin_time) AS hour,
+            COUNT(*) AS spinCount
+        FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND spin_time BETWEEN #{startTime,jdbcType=TIMESTAMP} AND #{endTime,jdbcType=TIMESTAMP}
+        AND deleted = 0
+        GROUP BY HOUR(spin_time)
+        ORDER BY spinCount DESC
+    </select>
+
+    <!-- 统计用户在指定时间范围内的总转盘次数 -->
+    <select id="countSpinsInRange" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM wheel_spin_record
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND spin_time BETWEEN #{startTime,jdbcType=TIMESTAMP} AND #{endTime,jdbcType=TIMESTAMP}
+        AND deleted = 0
+    </select>
+
+    <!-- 根据人口统计信息查询相似用户的画像 -->
+    <select id="selectByDemographics" resultMap="BaseResultMap">
+        SELECT p.*
+        FROM user_profile p
+        INNER JOIN wheel_user u ON p.user_id = u.id
+        WHERE p.deleted = 0
+        AND u.deleted = 0
+        AND u.status = 1
+        AND p.user_id != #{excludeUserId,jdbcType=BIGINT}
+        AND p.total_spins >= 5
+        <if test="gender != null and gender != 0">
+            AND u.gender = #{gender,jdbcType=INTEGER}
+        </if>
+        <if test="minAge != null and maxAge != null">
+            AND u.age BETWEEN #{minAge,jdbcType=INTEGER} AND #{maxAge,jdbcType=INTEGER}
+        </if>
+        <if test="city != null and city != ''">
+            AND u.city = #{city,jdbcType=VARCHAR}
+        </if>
+        ORDER BY p.total_spins DESC, p.last_active_time DESC
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+</mapper>

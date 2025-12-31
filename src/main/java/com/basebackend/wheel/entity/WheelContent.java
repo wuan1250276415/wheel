@@ -1,15 +1,14 @@
 package com.basebackend.wheel.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.basebackend.database.entity.BaseEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -18,9 +17,8 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName(value = "wheel_api.wheel_content")
-public class WheelContent extends BaseEntity implements Serializable {
-    private static final long serialVersionUID = 1L;
+@TableName(value = "wheel_api.wheel_content", autoResultMap = true)
+public class WheelContent extends BaseEntity {
     /**
      * 分类ID
      */
@@ -96,5 +94,23 @@ public class WheelContent extends BaseEntity implements Serializable {
      */
     @TableField(value = "`status`")
     private int status;
+
+    /**
+     * 热度分数
+     */
+    @TableField(value = "popularity_score")
+    private Double popularityScore;
+
+    /**
+     * 难度等级：1-简单，2-中等，3-困难
+     */
+    @TableField(value = "difficulty_level")
+    private Integer difficultyLevel;
+
+    /**
+     * 特征向量
+     */
+    @TableField(value = "feature_vector", typeHandler = JacksonTypeHandler.class)
+    private List<Double> featureVector;
 
 }

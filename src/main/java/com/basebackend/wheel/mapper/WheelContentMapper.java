@@ -71,4 +71,37 @@ public interface WheelContentMapper extends BaseMapper<WheelContent> {
             @Param("auditStatus") Integer auditStatus,
             @Param("auditPriority") Integer auditPriority
     );
+
+    /**
+     * 查询所有已审核通过且启用的内容
+     *
+     * @return 内容列表
+     */
+    List<WheelContent> selectAllApprovedAndEnabled();
+
+    /**
+     * 批量更新内容的热度分数
+     *
+     * @param contentIds 内容ID列表
+     * @param scores 对应的热度分数列表
+     */
+    void batchUpdatePopularityScores(
+            @Param("contentIds") List<Long> contentIds,
+            @Param("scores") List<Double> scores
+    );
+
+    /**
+     * 更新单个内容的特征信息
+     *
+     * @param contentId 内容ID
+     * @param popularityScore 热度分数
+     * @param difficultyLevel 难度等级
+     * @param featureVector 特征向量JSON
+     */
+    void updateContentFeatures(
+            @Param("contentId") Long contentId,
+            @Param("popularityScore") Double popularityScore,
+            @Param("difficultyLevel") Integer difficultyLevel,
+            @Param("featureVector") String featureVector
+    );
 }

@@ -96,4 +96,34 @@
         AND audit_priority = #{auditPriority,jdbcType=INTEGER}
         AND status != 2
     </select>
+
+    <!-- 查询所有已审核通过且启用的内容 -->
+    <select id="selectAllApprovedAndEnabled" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_content
+        WHERE audit_status = 1
+        AND status = 1
+        AND deleted = 0
+    </select>
+
+    <!-- 批量更新内容的热度分数 -->
+    <update id="batchUpdatePopularityScores">
+        <foreach collection="contentIds" item="contentId" index="index" separator=";">
+            UPDATE wheel_content
+            SET popularity_score = #{scores[${index}],jdbcType=DOUBLE},
+                update_time = NOW()
+            WHERE id = #{contentId,jdbcType=BIGINT}
+        </foreach>
+    </update>
+
+    <!-- 更新单个内容的特征信息 -->
+    <update id="updateContentFeatures">
+        UPDATE wheel_content
+        SET popularity_score = #{popularityScore,jdbcType=DOUBLE},
+            difficulty_level = #{difficultyLevel,jdbcType=INTEGER},
+            feature_vector = #{featureVector,jdbcType=VARCHAR},
+            update_time = NOW()
+        WHERE id = #{contentId,jdbcType=BIGINT}
+    </update>
 </mapper>

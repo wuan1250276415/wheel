@@ -81,6 +81,12 @@
         <text class="menu-arrow">></text>
       </view>
 
+      <view class="menu-item" @click="navigateTo('/pages/report/report')">
+        <view class="menu-icon report-icon"></view>
+        <text class="menu-text">情侣报告</text>
+        <text class="menu-arrow">></text>
+      </view>
+
       <view class="menu-item" @click="navigateTo('/pages/statistics/statistics')">
         <view class="menu-icon stats-icon"></view>
         <text class="menu-text">数据统计</text>
@@ -471,6 +477,10 @@ function navigateTo(url: string) {
 
 .couple-icon {
   background: linear-gradient(135deg, #FFA500, #FF6347);
+}
+
+.report-icon {
+  background: linear-gradient(135deg, #FF69B4, #FF1493);
 }
 
 .stats-icon {

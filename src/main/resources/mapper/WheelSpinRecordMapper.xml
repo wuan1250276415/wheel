@@ -80,4 +80,39 @@
     WHERE user_id = #{userId,jdbcType=BIGINT}
     </select>
 
+    <!-- 统计内容的转盘次数 -->
+    <select id="countByContentId" resultType="int">
+        SELECT COUNT(*) FROM wheel_spin_record
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
+    <!-- 统计内容在指定时间范围内的转盘次数 -->
+    <select id="countByContentIdInRange" resultType="int">
+        SELECT COUNT(*) FROM wheel_spin_record
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND spin_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+        AND spin_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+        AND deleted = 0
+    </select>
+
+    <!-- 批量统计内容的转盘次数 -->
+    <select id="batchCountByContentIds" resultType="java.util.Map">
+        SELECT content_id as contentId, COUNT(*) as spinCount
+        FROM wheel_spin_record
+        WHERE content_id IN
+        <foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
+            #{contentId,jdbcType=BIGINT}
+        </foreach>
+        AND deleted = 0
+        GROUP BY content_id
+    </select>
+
+    <!-- 获取内容最近一次被转到的时间 -->
+    <select id="getLastSpinTimeByContentId" resultType="java.time.LocalDateTime">
+        SELECT MAX(spin_time) FROM wheel_spin_record
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
 </mapper>

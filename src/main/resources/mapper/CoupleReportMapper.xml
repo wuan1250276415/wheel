@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.CoupleReportMapper">
+
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.CoupleReport">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="couple_id" property="coupleId" jdbcType="BIGINT"/>
+        <result column="report_type" property="reportType" jdbcType="TINYINT"/>
+        <result column="start_date" property="startDate" jdbcType="DATE"/>
+        <result column="end_date" property="endDate" jdbcType="DATE"/>
+        <result column="report_data" property="reportData" jdbcType="VARCHAR"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="compatibility_score" property="compatibilityScore" jdbcType="INTEGER"/>
+        <result column="generated_at" property="generatedAt" jdbcType="TIMESTAMP"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="BIGINT"/>
+        <result column="update_by" property="updateBy" jdbcType="BIGINT"/>
+        <result column="deleted" property="deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, couple_id, report_type, start_date, end_date, report_data,
+        compatibility_score, generated_at, create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <!-- 分页查询情侣报告（支持类型和日期范围筛选） -->
+    <select id="selectPageByCondition" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_report
+        WHERE couple_id = #{coupleId,jdbcType=BIGINT}
+        AND deleted = 0
+        <if test="reportType != null">
+            AND report_type = #{reportType,jdbcType=TINYINT}
+        </if>
+        <if test="startDate != null">
+            AND start_date &gt;= #{startDate,jdbcType=DATE}
+        </if>
+        <if test="endDate != null">
+            AND end_date &lt;= #{endDate,jdbcType=DATE}
+        </if>
+        ORDER BY generated_at DESC
+    </select>
+
+    <!-- 根据情侣ID和报告类型查询最新报告 -->
+    <select id="selectLatestByType" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_report
+        WHERE couple_id = #{coupleId,jdbcType=BIGINT}
+        AND report_type = #{reportType,jdbcType=TINYINT}
+        AND deleted = 0
+        ORDER BY generated_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据情侣ID查询所有报告 -->
+    <select id="selectByCoupleId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_report
+        WHERE couple_id = #{coupleId,jdbcType=BIGINT}
+        AND deleted = 0
+        ORDER BY generated_at DESC
+    </select>
+
+    <!-- 根据报告ID和情侣ID查询报告（用于权限验证） -->
+    <select id="selectByIdAndCoupleId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_report
+        WHERE id = #{reportId,jdbcType=BIGINT}
+        AND couple_id = #{coupleId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
+    <!-- 查询指定日期范围内是否已存在报告 -->
+    <select id="selectByDateRange" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM couple_report
+        WHERE couple_id = #{coupleId,jdbcType=BIGINT}
+        AND report_type = #{reportType,jdbcType=TINYINT}
+        AND start_date = #{startDate,jdbcType=DATE}
+        AND end_date = #{endDate,jdbcType=DATE}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+</mapper>

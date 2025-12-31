@@ -45,6 +45,17 @@ public class CustomSecurityConfig {
                     new AntPathRequestMatcher("/webjars/**"),
                     new AntPathRequestMatcher("/actuator/health")
                 ).permitAll()
+                // 需要认证的接口（包括但不限于）:
+                // - /api/report/** : 情侣报告相关接口，需要JWT认证，情侣关系验证在服务层处理
+                // - /api/couple/** : 情侣关系管理接口
+                // - /api/moment/** : 动态相关接口
+                // - /api/chat/** : 聊天相关接口
+                // - /api/recommendations/** : AI推荐相关接口，需要JWT认证
+                //   - GET /api/recommendations/personal : 个性化推荐
+                //   - GET /api/recommendations/couple : 情侣推荐
+                //   - GET /api/recommendations/homepage : 首页推荐
+                //   - POST /api/recommendations/feedback : 推荐反馈
+                //   - POST /api/recommendations/survey : 偏好调查
                 // 其他接口需要认证
                 .anyRequest().authenticated())
             // 添加 JWT Filter

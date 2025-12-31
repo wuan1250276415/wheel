@@ -6,6 +6,7 @@ import com.basebackend.wheel.entity.CoupleRelationship;
 import com.basebackend.wheel.entity.WheelUser;
 import com.basebackend.wheel.mapper.CoupleRelationshipMapper;
 import com.basebackend.wheel.mapper.WheelUserMapper;
+import com.basebackend.wheel.service.AnniversaryService;
 import com.basebackend.wheel.service.CoupleService;
 import com.basebackend.wheel.util.AuditHelper;
 import com.basebackend.wheel.entity.WheelSpinRecord;
@@ -47,6 +48,9 @@ public class CoupleServiceImpl implements CoupleService {
 
     @Autowired
     private WheelSpinRecordMapper spinRecordMapper;
+
+    @Autowired
+    private AnniversaryService anniversaryService;
 
     @Override
     public InviteResult inviteCouple(Long userId, CoupleInviteDTO inviteDTO) {
@@ -144,10 +148,22 @@ public class CoupleServiceImpl implements CoupleService {
 
         coupleMapper.updateById(relationship);
 
-        // 7. 获取发起方信息
+        // 7. 创建默认纪念日（恋爱纪念日）
+        try {
+            anniversaryService.createDefaultAnniversary(
+                    relationship.getId(),
+                    relationship.getConfirmedAt().toLocalDate()
+            );
+        } catch (Exception e) {
+            log.warn("创建默认纪念日失败: relationshipId={}, error={}", 
+                    relationship.getId(), e.getMessage());
+            // 不影响主流程，继续执行
+        }
+
+        // 8. 获取发起方信息
         WheelUser inviter = userMapper.selectById(relationship.getUserId1());
 
-        // 8. 构建返回结果
+        // 9. 构建返回结果
         AcceptResult result = new AcceptResult();
         result.setRelationshipId(relationship.getId());
         result.setPartnerNickname(inviter.getNickname());

@@ -21,6 +21,54 @@
     <!-- 广告横幅 -->
     <AdBanner placement-key="home_banner" />
 
+    <!-- 个性化分类排名 -->
+    <view class="category-section" v-if="categoryRanking.length > 0">
+      <view class="section-title">
+        <text>🎯 为你推荐的分类</text>
+      </view>
+      <scroll-view class="category-scroll" scroll-x :show-scrollbar="false">
+        <view class="category-list">
+          <view
+            v-for="(category, index) in categoryRanking"
+            :key="category.categoryId"
+            class="category-rank-item"
+            @click="navigateToWheel(category.categoryId)"
+          >
+            <view class="rank-badge" :class="'rank-' + (index + 1)">{{ index + 1 }}</view>
+            <text class="category-rank-name">{{ category.categoryName }}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 为你推荐 -->
+    <view class="recommend-section" v-if="recommendedForYou.length > 0">
+      <RecommendationList
+        :recommendations="recommendedForYou"
+        title="为你推荐"
+        icon="💡"
+        :show-more="true"
+        :horizontal="true"
+        :show-reason="true"
+        @click="handleRecommendationClick"
+        @more="navigateTo('/pages/wheel/wheel')"
+      />
+    </view>
+
+    <!-- 情侣精选（仅情侣用户显示） -->
+    <view class="couple-section" v-if="coupleInfo && couplePicks.length > 0">
+      <RecommendationList
+        :recommendations="couplePicks"
+        title="情侣精选"
+        icon="💑"
+        :show-more="true"
+        :horizontal="true"
+        :show-reason="true"
+        @click="handleRecommendationClick"
+        @more="navigateTo('/pages/couple/couple')"
+      />
+    </view>
+
     <!-- 快速操作 -->
     <view class="quick-actions">
       <view class="action-card" @click="navigateTo('/pages/wheel/wheel')">
@@ -88,21 +136,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useWheelStore } from '@/stores/wheel'
+import { useRecommendationStore } from '@/stores/recommendation'
 import * as statisticsApi from '@/api/statistics'
 import AdBanner from '@/components/AdBanner.vue'
+import RecommendationList from '@/components/RecommendationList.vue'
 import * as coupleApi from '@/api/couple'
+import type { RecommendationVO } from '@/types/recommendation'
 
 const userStore = useUserStore()
 const wheelStore = useWheelStore()
+const recommendationStore = useRecommendationStore()
 
 const userInfo = ref(userStore.userInfo)
 const coupleInfo = ref<any>(null)
 const todayStats = ref<any>({})
 const recentResults = ref<any[]>([])
 const isLoading = ref(false)
+
+// 推荐数据计算属性
+const categoryRanking = computed(() => recommendationStore.categoryRanking)
+const recommendedForYou = computed(() => recommendationStore.recommendedForYou)
+const couplePicks = computed(() => recommendationStore.couplePicks)
 
 // 页面加载
 onMounted(() => {
@@ -137,9 +194,10 @@ async function initData() {
 
   try {
     // 并行获取数据
-    const [statsResult, coupleResult] = await Promise.allSettled([
+    const [statsResult, coupleResult, homepageResult] = await Promise.allSettled([
       statisticsApi.getUserStatistics(),
-      coupleApi.getCoupleInfo()
+      coupleApi.getCoupleInfo(),
+      recommendationStore.fetchHomepageRecommendations()
     ])
 
     
@@ -174,6 +232,17 @@ async function initData() {
   }
 }
 
+// 处理推荐内容点击
+function handleRecommendationClick(item: RecommendationVO) {
+  // 跳转到转盘页面，并传递分类ID
+  navigateTo(`/pages/wheel/wheel?categoryId=${item.categoryId}`)
+}
+
+// 跳转到转盘页面并选择分类
+function navigateToWheel(categoryId: number) {
+  navigateTo(`/pages/wheel/wheel?categoryId=${categoryId}`)
+}
+
 // 格式化时间
 function formatTime(timeStr: string) {
   const date = new Date(timeStr)
@@ -200,8 +269,11 @@ function navigateTo(url: string) {
     '/pages/profile/profile'
   ]
   
-  if (tabBarPages.includes(url)) {
-    uni.switchTab({ url })
+  // 提取基础路径（不含查询参数）
+  const basePath = url.split('?')[0]
+  
+  if (tabBarPages.includes(basePath)) {
+    uni.switchTab({ url: basePath })
   } else {
     uni.navigateTo({ url })
   }
@@ -263,6 +335,73 @@ function navigateTo(url: string) {
   display: block;
   font-size: 28rpx;
   color: rgba(255, 255, 255, 0.9);
+}
+
+/* 个性化分类排名 */
+.category-section {
+  margin-bottom: 30rpx;
+}
+
+.category-scroll {
+  width: 100%;
+}
+
+.category-list {
+  display: flex;
+  padding: 10rpx 0;
+}
+
+.category-rank-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 16rpx 24rpx;
+  border-radius: 30rpx;
+  margin-right: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.category-rank-item:active {
+  transform: scale(0.95);
+}
+
+.rank-badge {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: bold;
+  color: #fff;
+  margin-right: 12rpx;
+  background: #ccc;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #CD7F32, #B87333);
+}
+
+.category-rank-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+/* 推荐区域 */
+.recommend-section,
+.couple-section {
+  margin-bottom: 20rpx;
 }
 
 .quick-actions {

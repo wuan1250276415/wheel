@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.RecommendationLogMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.RecommendationLog">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="user_id" jdbcType="BIGINT" property="userId"/>
+        <result column="content_id" jdbcType="BIGINT" property="contentId"/>
+        <result column="recommendation_score" jdbcType="DOUBLE" property="recommendationScore"/>
+        <result column="recommendation_reason" jdbcType="VARCHAR" property="recommendationReason"/>
+        <result column="is_clicked" jdbcType="BOOLEAN" property="isClicked"/>
+        <result column="click_time" jdbcType="TIMESTAMP" property="clickTime"/>
+        <result column="session_id" jdbcType="VARCHAR" property="sessionId"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="BOOLEAN" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, content_id, recommendation_score, recommendation_reason, is_clicked,
+        click_time, session_id, create_time, create_by, update_time, update_by, deleted
+    </sql>
+
+    <!-- 查询用户最近的推荐记录 -->
+    <select id="selectRecentByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM recommendation_log
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND create_time &gt;= #{since,jdbcType=TIMESTAMP}
+        AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询用户在指定时间内已看过的内容ID列表 -->
+    <select id="selectSeenContentIds" resultType="java.lang.Long">
+        SELECT DISTINCT content_id
+        FROM recommendation_log
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND create_time &gt;= #{since,jdbcType=TIMESTAMP}
+        AND deleted = 0
+    </select>
+
+    <!-- 计算内容的点击率 -->
+    <select id="calculateCTR" resultType="java.lang.Double">
+        SELECT
+            CASE
+                WHEN COUNT(*) &gt;= #{minImpressions,jdbcType=INTEGER}
+                THEN SUM(CASE WHEN is_clicked = 1 THEN 1 ELSE 0 END) * 1.0 / COUNT(*)
+                ELSE NULL
+            END AS ctr
+        FROM recommendation_log
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
+    <!-- 更新点击状态 -->
+    <update id="updateClickStatus">
+        UPDATE recommendation_log
+        SET is_clicked = 1,
+            click_time = #{clickTime,jdbcType=TIMESTAMP},
+            update_time = NOW()
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND content_id = #{contentId,jdbcType=BIGINT}
+        AND session_id = #{sessionId,jdbcType=VARCHAR}
+        AND is_clicked = 0
+        AND deleted = 0
+    </update>
+
+    <!-- 删除指定时间之前的记录 -->
+    <delete id="deleteOldLogs">
+        DELETE FROM recommendation_log
+        WHERE create_time &lt; #{before,jdbcType=TIMESTAMP}
+    </delete>
+
+    <!-- 统计内容的曝光次数 -->
+    <select id="countImpressions" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM recommendation_log
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND deleted = 0
+    </select>
+
+    <!-- 统计内容的点击次数 -->
+    <select id="countClicks" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM recommendation_log
+        WHERE content_id = #{contentId,jdbcType=BIGINT}
+        AND is_clicked = 1
+        AND deleted = 0
+    </select>
+</mapper>

@@ -1,72 +1,83 @@
 <template>
   <view class="login-container">
-    <!-- Logo区域 -->
-    <view class="logo-section">
-      <view class="logo-circle">
-        <text class="logo-text">💕</text>
-      </view>
-      <text class="app-title">情侣转盘</text>
-      <text class="app-subtitle">和TA一起享受甜蜜时光</text>
+    <!-- 偏好调查弹窗 -->
+    <view class="survey-modal" v-if="showSurvey">
+      <PreferenceSurvey
+        @complete="handleSurveyComplete"
+        @skip="handleSurveySkip"
+      />
     </view>
 
-    <!-- 登录表单 -->
-    <view class="form-section">
-      <view class="input-group">
-        <view class="input-wrapper" :class="{ 'input-focus': usernameFocus, 'input-error': usernameError }">
-          <text class="input-icon">👤</text>
-          <input
-            v-model="username"
-            type="text"
-            placeholder="请输入用户名"
-            @focus="usernameFocus = true"
-            @blur="handleUsernameBlur"
-            @input="clearUsernameError"
-          />
+    <!-- 登录界面 -->
+    <view v-else>
+      <!-- Logo区域 -->
+      <view class="logo-section">
+        <view class="logo-circle">
+          <text class="logo-text">💕</text>
         </view>
-        <text v-if="usernameError" class="error-text">{{ usernameError }}</text>
+        <text class="app-title">情侣转盘</text>
+        <text class="app-subtitle">和TA一起享受甜蜜时光</text>
       </view>
 
-      <view class="input-group">
-        <view class="input-wrapper" :class="{ 'input-focus': passwordFocus, 'input-error': passwordError }">
-          <text class="input-icon">🔒</text>
-          <input
-            v-model="password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="请输入密码"
-            @focus="passwordFocus = true"
-            @blur="handlePasswordBlur"
-            @input="clearPasswordError"
-          />
-          <text class="toggle-password" @click="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁️' }}
-          </text>
+      <!-- 登录表单 -->
+      <view class="form-section">
+        <view class="input-group">
+          <view class="input-wrapper" :class="{ 'input-focus': usernameFocus, 'input-error': usernameError }">
+            <text class="input-icon">👤</text>
+            <input
+              v-model="username"
+              type="text"
+              placeholder="请输入用户名"
+              @focus="usernameFocus = true"
+              @blur="handleUsernameBlur"
+              @input="clearUsernameError"
+            />
+          </view>
+          <text v-if="usernameError" class="error-text">{{ usernameError }}</text>
         </view>
-        <text v-if="passwordError" class="error-text">{{ passwordError }}</text>
+
+        <view class="input-group">
+          <view class="input-wrapper" :class="{ 'input-focus': passwordFocus, 'input-error': passwordError }">
+            <text class="input-icon">🔒</text>
+            <input
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="请输入密码"
+              @focus="passwordFocus = true"
+              @blur="handlePasswordBlur"
+              @input="clearPasswordError"
+            />
+            <text class="toggle-password" @click="showPassword = !showPassword">
+              {{ showPassword ? '🙈' : '👁️' }}
+            </text>
+          </view>
+          <text v-if="passwordError" class="error-text">{{ passwordError }}</text>
+        </view>
+
+        <!-- 登录按钮 -->
+        <button 
+          class="login-btn" 
+          :class="{ 'btn-loading': loading }"
+          :disabled="loading"
+          @click="handleLogin"
+        >
+          <text v-if="loading" class="loading-spinner">⏳</text>
+          <text>{{ loading ? '登录中...' : '登 录' }}</text>
+        </button>
+
+        <!-- 错误提示 -->
+        <view v-if="loginError" class="login-error">
+          <text>{{ loginError }}</text>
+        </view>
       </view>
 
-      <!-- 登录按钮 -->
-      <button 
-        class="login-btn" 
-        :class="{ 'btn-loading': loading }"
-        :disabled="loading"
-        @click="handleLogin"
-      >
-        <text v-if="loading" class="loading-spinner">⏳</text>
-        <text>{{ loading ? '登录中...' : '登 录' }}</text>
-      </button>
-
-      <!-- 错误提示 -->
-      <view v-if="loginError" class="login-error">
-        <text>{{ loginError }}</text>
+      <!-- 底部提示 -->
+      <view class="footer-section">
+        <text class="footer-text">登录即表示同意</text>
+        <text class="link-text">《用户协议》</text>
+        <text class="footer-text">和</text>
+        <text class="link-text">《隐私政策》</text>
       </view>
-    </view>
-
-    <!-- 底部提示 -->
-    <view class="footer-section">
-      <text class="footer-text">登录即表示同意</text>
-      <text class="link-text">《用户协议》</text>
-      <text class="footer-text">和</text>
-      <text class="link-text">《隐私政策》</text>
     </view>
   </view>
 </template>
@@ -74,8 +85,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useRecommendationStore } from '@/stores/recommendation'
+import PreferenceSurvey from '@/components/PreferenceSurvey.vue'
 
 const userStore = useUserStore()
+const recommendationStore = useRecommendationStore()
 
 // 表单数据
 const username = ref('')
@@ -93,6 +107,9 @@ const loginError = ref('')
 
 // 加载状态
 const loading = ref(false)
+
+// 调查状态
+const showSurvey = ref(false)
 
 // 清除用户名错误
 function clearUsernameError() {
@@ -163,18 +180,27 @@ async function handleLogin() {
     const result = await userStore.login(username.value.trim(), password.value.trim())
 
     if (result.success) {
-      // 登录成功，跳转到首页
+      // 登录成功，检查是否需要偏好调查
       uni.showToast({
         title: '登录成功',
         icon: 'success',
-        duration: 1500
+        duration: 1000
       })
 
-      setTimeout(() => {
-        uni.reLaunch({
-          url: '/pages/index/index'
-        })
-      }, 1500)
+      // 检查是否需要偏好调查
+      const surveyResult = await recommendationStore.checkSurveyNeeded()
+      
+      if (surveyResult.success && surveyResult.needed) {
+        // 显示偏好调查
+        setTimeout(() => {
+          showSurvey.value = true
+        }, 1000)
+      } else {
+        // 直接跳转到首页
+        setTimeout(() => {
+          navigateToHome()
+        }, 1000)
+      }
     } else {
       // 登录失败，显示错误信息
       loginError.value = result.message || '登录失败，请重试'
@@ -185,6 +211,30 @@ async function handleLogin() {
     loading.value = false
   }
 }
+
+// 处理调查完成
+function handleSurveyComplete() {
+  uni.showToast({
+    title: '偏好设置成功',
+    icon: 'success',
+    duration: 1500
+  })
+  setTimeout(() => {
+    navigateToHome()
+  }, 1500)
+}
+
+// 处理跳过调查
+function handleSurveySkip() {
+  navigateToHome()
+}
+
+// 跳转到首页
+function navigateToHome() {
+  uni.reLaunch({
+    url: '/pages/index/index'
+  })
+}
 </script>
 
 <style scoped>
@@ -194,6 +244,17 @@ async function handleLogin() {
   display: flex;
   flex-direction: column;
   padding: 60rpx 40rpx;
+}
+
+/* 调查弹窗 */
+.survey-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: linear-gradient(180deg, #FFF0F5 0%, #FFFFFF 100%);
 }
 
 .logo-section {
