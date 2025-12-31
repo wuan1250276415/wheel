@@ -2,10 +2,15 @@ package com.basebackend.wheel.controller;
 
 import com.basebackend.common.context.UserContextHolder;
 import com.basebackend.common.model.Result;
+import com.basebackend.wheel.dto.ContentAppealDTO;
 import com.basebackend.wheel.dto.ContentSubmitDTO;
+import com.basebackend.wheel.dto.ReportRequest;
+import com.basebackend.wheel.dto.ReportResult;
+import com.basebackend.wheel.entity.ContentAuditLog;
 import com.basebackend.wheel.entity.WheelContent;
+import com.basebackend.wheel.service.ContentModerationService;
 import com.basebackend.wheel.service.ContentService;
-import com.basebackend.wheel.util.AuditHelper;
+import com.basebackend.wheel.service.ReportHandlerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +35,12 @@ public class ContentController {
 
     @Autowired
     private ContentService contentService;
+
+    @Autowired
+    private ReportHandlerService reportHandlerService;
+
+    @Autowired
+    private ContentModerationService contentModerationService;
 
     @Operation(summary = "提交内容", description = "提交转盘内容，需要审核通过后才能使用")
     @PostMapping("/submit")
@@ -126,6 +137,38 @@ public class ContentController {
         }
     }
 
+    @Operation(summary = "增强举报内容", description = "支持多类型举报和证据上传的增强举报接口")
+    @PostMapping("/report/submit")
+    public Result<ReportResult> submitReport(
+            @Valid @RequestBody ReportRequest reportRequest,
+            HttpServletRequest request) {
+        try {
+            Long userId = UserContextHolder.getUserId();
+            reportRequest.setReporterId(userId);
+            
+            ReportResult result = reportHandlerService.submitReport(reportRequest);
+            log.info("用户举报提交成功: reporterId={}, contentId={}, reportType={}, reason={}", 
+                    userId, reportRequest.getContentId(), reportRequest.getReportType(), reportRequest.getReportReason());
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("用户举报提交失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Operation(summary = "检查是否已举报", description = "检查当前用户是否已举报过该内容")
+    @GetMapping("/report/check")
+    public Result<Boolean> checkReported(@RequestParam Long contentId) {
+        try {
+            Long userId = UserContextHolder.getUserId();
+            boolean reported = reportHandlerService.hasReported(contentId, userId);
+            return Result.success(reported);
+        } catch (Exception e) {
+            log.error("检查举报状态失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
     @Operation(summary = "获取内容审核状态", description = "获取指定内容的审核状态")
     @GetMapping("/{contentId}/audit-status")
     public Result<ContentService.AuditStatus> getAuditStatus(@PathVariable Long contentId) {
@@ -150,6 +193,64 @@ public class ContentController {
             return Result.success(contents);
         } catch (Exception e) {
             log.error("搜索内容失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Operation(summary = "提交内容申诉", description = "对被拒绝的内容提交申诉")
+    @PostMapping("/appeal")
+    public Result<Void> submitAppeal(
+            @Valid @RequestBody ContentAppealDTO appealDTO,
+            HttpServletRequest request) {
+        try {
+            Long userId = UserContextHolder.getUserId();
+            boolean success = contentModerationService.appealContent(
+                    appealDTO.getContentId(), 
+                    userId, 
+                    appealDTO.getAppealReason()
+            );
+            if (success) {
+                log.info("用户提交申诉成功: userId={}, contentId={}", userId, appealDTO.getContentId());
+                return Result.success();
+            } else {
+                return Result.error("申诉提交失败，请稍后重试");
+            }
+        } catch (Exception e) {
+            log.error("提交申诉失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Operation(summary = "获取申诉状态", description = "获取内容申诉的处理状态")
+    @GetMapping("/appeal/status")
+    public Result<ContentAuditLog> getAppealStatus(@RequestParam Long contentId) {
+        try {
+            ContentAuditLog auditLog = contentModerationService.getAuditStatus(contentId);
+            return Result.success(auditLog);
+        } catch (Exception e) {
+            log.error("获取申诉状态失败: error={}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Operation(summary = "检查是否可以申诉", description = "检查内容是否可以提交申诉")
+    @GetMapping("/appeal/check")
+    public Result<Boolean> checkCanAppeal(@RequestParam Long contentId) {
+        try {
+            Long userId = UserContextHolder.getUserId();
+            // 检查内容是否属于当前用户且状态为已拒绝
+            WheelContent content = contentService.getContentById(contentId);
+            if (content == null) {
+                return Result.error("内容不存在");
+            }
+            if (!content.getCreateUserId().equals(userId)) {
+                return Result.error("无权申诉此内容");
+            }
+            // auditStatus 2表示已拒绝
+            boolean canAppeal = content.getAuditStatus() == 2;
+            return Result.success(canAppeal);
+        } catch (Exception e) {
+            log.error("检查申诉状态失败: error={}", e.getMessage());
             throw e;
         }
     }

@@ -200,6 +200,7 @@ export interface AuditHistory {
 // 审核统计
 export interface AuditStatistics {
   todayAuditCount: number
+  totalAuditCount?: number
   approveRate: number
   avgProcessTime: number
   pendingCount: number

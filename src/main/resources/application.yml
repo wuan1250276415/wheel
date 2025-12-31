@@ -22,6 +22,32 @@ wheel:
     max-daily-spins: 50
     min-spin-interval: 1000
 
+  # AI内容审核配置
+  ai-audit:
+    enabled: ${AI_AUDIT_ENABLED:false}
+    primary-provider: ${AI_AUDIT_PRIMARY_PROVIDER:aliyun}
+    connect-timeout: 3000
+    read-timeout: 6000
+    max-retries: 2
+    retry-delay-ms: 500
+    # 阿里云内容安全配置
+    aliyun:
+      enabled: ${ALIYUN_AUDIT_ENABLED:false}
+      access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+      access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+      region-id: ${ALIYUN_REGION_ID:cn-shanghai}
+      endpoint: ${ALIYUN_AUDIT_ENDPOINT:green-cip.cn-shanghai.aliyuncs.com}
+      text-scenes: antispam
+      image-scenes: porn,terrorism,ad
+    # 腾讯云天御配置
+    tencent:
+      enabled: ${TENCENT_AUDIT_ENABLED:false}
+      secret-id: ${TENCENT_SECRET_ID:}
+      secret-key: ${TENCENT_SECRET_KEY:}
+      region: ${TENCENT_REGION:ap-guangzhou}
+      endpoint: ${TENCENT_TMS_ENDPOINT:tms.tencentcloudapi.com}
+      image-endpoint: ${TENCENT_IMS_ENDPOINT:ims.tencentcloudapi.com}
+
 push:
   jpush:
     enabled: ${JPUSH_ENABLED:false}

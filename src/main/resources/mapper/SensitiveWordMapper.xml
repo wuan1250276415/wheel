@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.SensitiveWordMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.SensitiveWord">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="word" jdbcType="VARCHAR" property="word"/>
+        <result column="category" jdbcType="TINYINT" property="category"/>
+        <result column="level" jdbcType="TINYINT" property="level"/>
+        <result column="variants" jdbcType="VARCHAR" property="variants"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="status" jdbcType="TINYINT" property="status"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, word, category, level, variants, status, create_time, create_by, update_time, update_by, deleted
+    </sql>
+
+    <!-- 查询所有启用的敏感词 -->
+    <select id="selectAllEnabled" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sensitive_word
+        WHERE status = 1
+        AND deleted = 1
+        ORDER BY level DESC, category ASC
+    </select>
+
+    <!-- 根据分类查询敏感词 -->
+    <select id="selectByCategory" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sensitive_word
+        WHERE category = #{category,jdbcType=TINYINT}
+        AND status = 1
+        AND deleted = 1
+        ORDER BY level DESC
+    </select>
+
+    <!-- 根据风险等级查询敏感词 -->
+    <select id="selectByLevel" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sensitive_word
+        WHERE level = #{level,jdbcType=TINYINT}
+        AND status = 1
+        AND deleted = 1
+        ORDER BY category ASC
+    </select>
+
+    <!-- 检查敏感词是否存在 -->
+    <select id="existsByWord" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM sensitive_word
+        WHERE word = #{word,jdbcType=VARCHAR}
+        AND deleted = 1
+    </select>
+
+    <!-- 批量插入敏感词 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO sensitive_word (word, category, level, variants, status, create_time, create_by)
+        VALUES
+        <foreach collection="words" item="item" separator=",">
+            (#{item.word,jdbcType=VARCHAR},
+             #{item.category,jdbcType=TINYINT},
+             #{item.level,jdbcType=TINYINT},
+             #{item.variants,jdbcType=VARCHAR,typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
+             #{item.status,jdbcType=TINYINT},
+             NOW(),
+             #{item.createBy,jdbcType=BIGINT})
+        </foreach>
+        ON DUPLICATE KEY UPDATE update_time = NOW()
+    </insert>
+
+    <!-- 统计各分类敏感词数量 -->
+    <select id="countByCategory" resultType="java.util.Map">
+        SELECT
+            category AS category,
+            COUNT(*) AS count
+        FROM sensitive_word
+        WHERE status = 1
+        AND deleted = 1
+        GROUP BY category
+        ORDER BY category ASC
+    </select>
+</mapper>

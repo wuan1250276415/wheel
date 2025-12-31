@@ -38,13 +38,16 @@
             <text class="nickname">{{ moment.nickname }}</text>
             <text class="time">{{ formatTime(moment.createTime) }}</text>
           </view>
-          <!-- 操作按钮（仅自己的动态） -->
-          <view v-if="canEditMoment(moment)" class="action-btns">
-            <view class="edit-btn" @click.stop="goToEdit(moment.id)">
+          <!-- 操作按钮 -->
+          <view class="action-btns">
+            <view v-if="canEditMoment(moment)" class="edit-btn" @click.stop="goToEdit(moment.id)">
               <text class="edit-icon">✎</text>
             </view>
-            <view class="delete-btn" @click.stop="confirmDelete(moment.id)">
+            <view v-if="canEditMoment(moment)" class="delete-btn" @click.stop="confirmDelete(moment.id)">
               <text class="delete-icon">×</text>
+            </view>
+            <view v-if="!canEditMoment(moment)" class="report-btn" @click.stop="openReportDialog(moment)">
+              <text class="report-icon">⚠️</text>
             </view>
           </view>
         </view>
@@ -78,6 +81,11 @@
             <text class="icon">💬</text>
             <text class="count">{{ moment.commentCount }}</text>
           </view>
+
+          <view class="action-item report" @click.stop="openReportDialog(moment)">
+            <text class="icon">🚨</text>
+            <text class="count">举报</text>
+          </view>
         </view>
       </view>
 
@@ -90,6 +98,15 @@
         <text>没有更多了</text>
       </view>
     </scroll-view>
+
+    <!-- 举报弹窗 -->
+    <ReportDialog
+      :visible="showReportDialog"
+      :content-id="reportContentId"
+      :content-type="0"
+      @close="showReportDialog = false"
+      @success="onReportSuccess"
+    />
   </view>
 </template>
 
@@ -98,11 +115,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useMomentStore } from '@/stores/moment'
 import { useUserStore } from '@/stores/user'
 import { formatRelativeTime } from '@/utils'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const momentStore = useMomentStore()
 const userStore = useUserStore()
 
 const refreshing = ref(false)
+const showReportDialog = ref(false)
+const reportContentId = ref<number | string>(0)
 
 const moments = computed(() => momentStore.moments)
 const loading = computed(() => momentStore.isLoadingTimeline)
@@ -170,6 +190,17 @@ function formatTime(time: string) {
 function canEditMoment(moment: any) {
   if (!currentUserId.value || !moment.userId) return false
   return String(moment.userId) === String(currentUserId.value)
+}
+
+// 打开举报弹窗
+function openReportDialog(moment: any) {
+  reportContentId.value = moment.id
+  showReportDialog.value = true
+}
+
+// 举报成功回调
+function onReportSuccess() {
+  uni.showToast({ title: '举报已提交', icon: 'success' })
 }
 
 // 确认删除动态
@@ -362,7 +393,35 @@ function confirmDelete(momentId: string | number) {
         font-size: 24rpx;
         color: #999;
       }
+
+      &.report {
+        margin-left: auto;
+        
+        .icon {
+          font-size: 28rpx;
+        }
+        
+        .count {
+          font-size: 22rpx;
+          color: #999;
+        }
+      }
     }
+  }
+}
+
+.report-btn {
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(220, 20, 60, 0.1);
+  border-radius: 50%;
+
+  .report-icon {
+    font-size: 28rpx;
+    line-height: 1;
   }
 }
 

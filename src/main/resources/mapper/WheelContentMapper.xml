@@ -126,4 +126,69 @@
             update_time = NOW()
         WHERE id = #{contentId,jdbcType=BIGINT}
     </update>
+
+    <!-- 带筛选条件的审核队列查询 -->
+    <select id="selectAuditQueueWithFilter" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM wheel_content
+        WHERE audit_status = 0
+        AND status != 2
+        <if test="categoryId != null">
+            AND category_id = #{categoryId,jdbcType=BIGINT}
+        </if>
+        <if test="auditPriority != null">
+            AND audit_priority = #{auditPriority,jdbcType=INTEGER}
+        </if>
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime}
+        </if>
+        <if test="submitUserId != null">
+            AND create_user_id = #{submitUserId,jdbcType=BIGINT}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND content_text LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY audit_priority DESC, create_time ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset,jdbcType=INTEGER}, #{limit,jdbcType=INTEGER}
+        </if>
+    </select>
+
+    <!-- 统计带筛选条件的审核队列数量 -->
+    <select id="countAuditQueueWithFilter" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM wheel_content
+        WHERE audit_status = 0
+        AND status != 2
+        <if test="categoryId != null">
+            AND category_id = #{categoryId,jdbcType=BIGINT}
+        </if>
+        <if test="auditPriority != null">
+            AND audit_priority = #{auditPriority,jdbcType=INTEGER}
+        </if>
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime}
+        </if>
+        <if test="submitUserId != null">
+            AND create_user_id = #{submitUserId,jdbcType=BIGINT}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND content_text LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </select>
+
+    <!-- 统计待审核内容总数 -->
+    <select id="countPendingAudit" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM wheel_content
+        WHERE audit_status = 0
+        AND status != 2
+    </select>
 </mapper>

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.BlacklistMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.Blacklist">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="type" jdbcType="TINYINT" property="type"/>
+        <result column="target_id" jdbcType="VARCHAR" property="targetId"/>
+        <result column="reason" jdbcType="VARCHAR" property="reason"/>
+        <result column="duration" jdbcType="INTEGER" property="duration"/>
+        <result column="expire_at" jdbcType="TIMESTAMP" property="expireAt"/>
+        <result column="operator_id" jdbcType="BIGINT" property="operatorId"/>
+        <result column="status" jdbcType="TINYINT" property="status"/>
+        <result column="appeal_status" jdbcType="TINYINT" property="appealStatus"/>
+        <result column="appeal_reason" jdbcType="VARCHAR" property="appealReason"/>
+        <result column="appeal_time" jdbcType="TIMESTAMP" property="appealTime"/>
+        <result column="appeal_handler_id" jdbcType="BIGINT" property="appealHandlerId"/>
+        <result column="appeal_handled_at" jdbcType="TIMESTAMP" property="appealHandledAt"/>
+        <result column="appeal_result" jdbcType="VARCHAR" property="appealResult"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, type, target_id, reason, duration, expire_at, operator_id, status, 
+        appeal_status, appeal_reason, appeal_time, appeal_handler_id, appeal_handled_at, appeal_result,
+        create_time, create_by, update_time, update_by, deleted
+    </sql>
+
+    <!-- 根据类型和目标ID查询有效的黑名单记录 -->
+    <select id="selectActiveByTypeAndTarget" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE type = #{type,jdbcType=TINYINT}
+        AND target_id = #{targetId,jdbcType=VARCHAR}
+        AND status = 1
+        AND deleted = 1
+        AND (expire_at IS NULL OR expire_at > NOW())
+        LIMIT 1
+    </select>
+
+    <!-- 查询用户的有效黑名单记录 -->
+    <select id="selectActiveByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE type = 1
+        AND target_id = #{userId,jdbcType=VARCHAR}
+        AND status = 1
+        AND deleted = 1
+        AND (expire_at IS NULL OR expire_at > NOW())
+        LIMIT 1
+    </select>
+
+    <!-- 查询IP的有效黑名单记录 -->
+    <select id="selectActiveByIp" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE type = 2
+        AND target_id = #{ip,jdbcType=VARCHAR}
+        AND status = 1
+        AND deleted = 1
+        AND (expire_at IS NULL OR expire_at > NOW())
+        LIMIT 1
+    </select>
+
+    <!-- 查询设备的有效黑名单记录 -->
+    <select id="selectActiveByDeviceId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE type = 3
+        AND target_id = #{deviceId,jdbcType=VARCHAR}
+        AND status = 1
+        AND deleted = 1
+        AND (expire_at IS NULL OR expire_at > NOW())
+        LIMIT 1
+    </select>
+
+    <!-- 查询已过期的黑名单记录 -->
+    <select id="selectExpired" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE status = 1
+        AND deleted = 1
+        AND expire_at IS NOT NULL
+        AND expire_at &lt;= #{now,jdbcType=TIMESTAMP}
+    </select>
+
+    <!-- 批量更新过期黑名单状态为已解除 -->
+    <update id="batchReleaseExpired">
+        UPDATE blacklist
+        SET status = 0,
+            update_time = NOW()
+        WHERE status = 1
+        AND deleted = 1
+        AND expire_at IS NOT NULL
+        AND expire_at &lt;= #{now,jdbcType=TIMESTAMP}
+    </update>
+
+    <!-- 查询待处理的申诉列表 -->
+    <select id="selectPendingAppeals" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE appeal_status = 1
+        AND deleted = 1
+        ORDER BY appeal_time ASC
+    </select>
+
+    <!-- 统计各类型黑名单数量 -->
+    <select id="countByType" resultType="java.util.Map">
+        SELECT
+            type AS type,
+            COUNT(*) AS count
+        FROM blacklist
+        WHERE status = 1
+        AND deleted = 1
+        GROUP BY type
+        ORDER BY type ASC
+    </select>
+
+    <!-- 查询指定时间范围内新增的黑名单 -->
+    <select id="selectByTimeRange" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blacklist
+        WHERE create_time BETWEEN #{startTime,jdbcType=TIMESTAMP} AND #{endTime,jdbcType=TIMESTAMP}
+        AND deleted = 1
+        ORDER BY create_time DESC
+    </select>
+</mapper>

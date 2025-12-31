@@ -18,6 +18,20 @@
             <el-option label="学习工作" :value="4" />
           </el-select>
         </el-form-item>
+        <el-form-item label="风险等级">
+          <el-select v-model="queryForm.riskLevel" placeholder="全部" clearable style="width: 120px">
+            <el-option label="高风险" value="high" />
+            <el-option label="中风险" value="medium" />
+            <el-option label="低风险" value="low" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="内容类型">
+          <el-select v-model="queryForm.contentType" placeholder="全部" clearable style="width: 120px">
+            <el-option label="文本" :value="1" />
+            <el-option label="图片" :value="2" />
+            <el-option label="混合" :value="3" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="提交时间">
           <el-date-picker
             v-model="queryForm.dateRange"
@@ -67,42 +81,63 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="内容ID" width="80" />
-        <el-table-column prop="title" label="标题" width="200" />
-        <el-table-column label="分类" width="120">
+        <el-table-column prop="title" label="标题" width="200" show-overflow-tooltip />
+        <el-table-column label="分类" width="100">
           <template #default="{ row }">
             {{ getCategoryName(row.categoryId) }}
           </template>
         </el-table-column>
-        <el-table-column label="优先级" width="100">
+        <el-table-column label="优先级" width="80">
           <template #default="{ row }">
-            <el-tag :type="getPriorityType(row.priority)">
+            <el-tag :type="getPriorityType(row.priority)" size="small">
               {{ getPriorityText(row.priority) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="submitUser" label="提交用户" width="120" />
-        <el-table-column prop="submitTime" label="提交时间" width="180" />
-        <el-table-column label="AI预审" width="120">
+        <el-table-column prop="submitUser" label="提交用户" width="100" />
+        <el-table-column label="AI预审" width="180">
           <template #default="{ row }">
-            <el-tag v-if="row.aiAuditResult" :type="row.aiAuditResult === 1 ? 'success' : 'danger'">
-              {{ row.aiAuditResult === 1 ? '建议通过' : '建议拒绝' }}
-            </el-tag>
-            <span v-else>-</span>
+            <div v-if="row.aiAuditResult" class="ai-result">
+              <el-tag :type="getAiResultType(row.aiAuditResult)" size="small">
+                {{ getAiResultText(row.aiAuditResult) }}
+              </el-tag>
+              <span v-if="row.riskScore !== undefined" class="risk-score" :class="getRiskScoreClass(row.riskScore)">
+                风险分: {{ row.riskScore }}
+              </span>
+            </div>
+            <span v-else style="color: #909399">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="等待时长" width="100">
+        <el-table-column label="敏感词检测" width="120">
           <template #default="{ row }">
-            {{ getWaitingTime(row.submitTime) }}
+            <template v-if="row.sensitiveWords && row.sensitiveWords.length > 0">
+              <el-popover placement="top" :width="200" trigger="hover">
+                <template #reference>
+                  <el-tag type="danger" size="small">
+                    检出{{ row.sensitiveWords.length }}个
+                  </el-tag>
+                </template>
+                <div>
+                  <el-tag v-for="word in row.sensitiveWords" :key="word" size="small" style="margin: 2px">
+                    {{ word }}
+                  </el-tag>
+                </div>
+              </el-popover>
+            </template>
+            <el-tag v-else type="success" size="small">无</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column prop="submitTime" label="提交时间" width="160" />
+        <el-table-column label="等待时长" width="90">
           <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              size="small"
-              @click="handlePreview(row)"
-            >
+            <span :class="getWaitingTimeClass(row.submitTime)">
+              {{ getWaitingTime(row.submitTime) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handlePreview(row)">
               预览
             </el-button>
             <el-button
@@ -142,11 +177,7 @@
     </el-card>
 
     <!-- 内容预览对话框 -->
-    <el-dialog
-      v-model="previewDialogVisible"
-      title="内容预览"
-      width="800px"
-    >
+    <el-dialog v-model="previewDialogVisible" title="内容预览" width="800px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="内容ID">{{ previewData.id }}</el-descriptions-item>
         <el-descriptions-item label="分类">{{ getCategoryName(previewData.categoryId) }}</el-descriptions-item>
@@ -155,37 +186,56 @@
           {{ previewData.description }}
         </el-descriptions-item>
         <el-descriptions-item label="标签" :span="2">
-          <el-tag v-for="tag in previewData.tags" :key="tag" style="margin-right: 8px">
-            {{ tag }}
-          </el-tag>
+          <el-tag v-for="tag in previewData.tags" :key="tag" style="margin-right: 8px">{{ tag }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="提交用户">{{ previewData.submitUser }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ previewData.submitTime }}</el-descriptions-item>
-        <el-descriptions-item label="AI预审结果" :span="2">
-          <el-tag v-if="previewData.aiAuditResult" :type="previewData.aiAuditResult === 1 ? 'success' : 'danger'">
-            {{ previewData.aiAuditResult === 1 ? '建议通过' : '建议拒绝' }}
-          </el-tag>
-          <span v-else>-</span>
-          <div v-if="previewData.aiAuditReason" style="margin-top: 8px; color: #909399">
-            原因：{{ previewData.aiAuditReason }}
-          </div>
-        </el-descriptions-item>
       </el-descriptions>
+
+      <!-- AI预审结果详情 -->
+      <el-card v-if="previewData.aiAuditDetail" class="ai-detail-card" shadow="never">
+        <template #header>
+          <span>AI预审结果</span>
+        </template>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="审核决策">
+            <el-tag :type="getAiResultType(previewData.aiAuditResult)">
+              {{ getAiResultText(previewData.aiAuditResult) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="风险评分">
+            <span :class="getRiskScoreClass(previewData.riskScore)">{{ previewData.riskScore }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="风险类型" :span="2">
+            <el-tag v-for="risk in previewData.aiAuditDetail?.risks" :key="risk.type" type="warning" size="small" style="margin-right: 4px">
+              {{ risk.label }} ({{ (risk.confidence * 100).toFixed(0) }}%)
+            </el-tag>
+            <span v-if="!previewData.aiAuditDetail?.risks?.length" style="color: #909399">无风险</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核建议" :span="2">
+            {{ previewData.aiAuditDetail?.suggestion || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <!-- 敏感词检测结果 -->
+      <el-card v-if="previewData.sensitiveWords?.length > 0" class="sensitive-card" shadow="never">
+        <template #header>
+          <span>敏感词检测结果</span>
+        </template>
+        <div class="sensitive-words">
+          <el-tag v-for="word in previewData.sensitiveWords" :key="word" type="danger" style="margin: 4px">
+            {{ word }}
+          </el-tag>
+        </div>
+      </el-card>
 
       <template #footer>
         <el-button @click="previewDialogVisible = false">关闭</el-button>
-        <el-button
-          type="success"
-          v-permission="['audit:queue:approve']"
-          @click="handleApproveFromPreview"
-        >
+        <el-button type="success" v-permission="['audit:queue:approve']" @click="handleApproveFromPreview">
           通过
         </el-button>
-        <el-button
-          type="danger"
-          v-permission="['audit:queue:reject']"
-          @click="handleRejectFromPreview"
-        >
+        <el-button type="danger" v-permission="['audit:queue:reject']" @click="handleRejectFromPreview">
           拒绝
         </el-button>
       </template>
@@ -195,31 +245,31 @@
     <el-dialog
       v-model="auditDialogVisible"
       :title="auditDialogTitle"
-      width="500px"
+      width="550px"
       :close-on-click-modal="false"
     >
-      <el-form
-        ref="auditFormRef"
-        :model="auditForm"
-        :rules="auditRules"
-        label-width="100px"
-      >
+      <el-form ref="auditFormRef" :model="auditForm" :rules="auditRules" label-width="100px">
+        <!-- 拒绝原因模板（仅拒绝时显示） -->
+        <el-form-item v-if="auditForm.auditStatus === 2" label="拒绝原因">
+          <el-select v-model="selectedRejectTemplate" placeholder="选择拒绝原因模板" style="width: 100%" @change="handleTemplateSelect">
+            <el-option v-for="tpl in rejectTemplates" :key="tpl.id" :label="tpl.name" :value="tpl.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="审核意见" prop="auditComment">
           <el-input
             v-model="auditForm.auditComment"
             type="textarea"
             :rows="5"
-            placeholder="请输入审核意见（选填）"
-            maxlength="200"
+            :placeholder="auditForm.auditStatus === 2 ? '请输入拒绝原因' : '请输入审核意见（选填）'"
+            maxlength="500"
+            show-word-limit
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
         <el-button @click="auditDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleAuditSubmit">
-          确定
-        </el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleAuditSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -238,10 +288,24 @@ import {
 } from '@/api/audit'
 import dayjs from 'dayjs'
 
+// 拒绝原因模板
+const rejectTemplates = [
+  { id: 1, name: '内容涉及色情低俗', content: '您提交的内容涉及色情低俗信息，违反平台规定，已被拒绝。' },
+  { id: 2, name: '内容涉及暴力血腥', content: '您提交的内容涉及暴力血腥信息，违反平台规定，已被拒绝。' },
+  { id: 3, name: '内容涉及政治敏感', content: '您提交的内容涉及政治敏感信息，违反平台规定，已被拒绝。' },
+  { id: 4, name: '内容涉及广告推广', content: '您提交的内容涉及广告推广信息，违反平台规定，已被拒绝。' },
+  { id: 5, name: '内容涉及侵权', content: '您提交的内容涉及侵权信息，违反平台规定，已被拒绝。' },
+  { id: 6, name: '内容质量不符合要求', content: '您提交的内容质量不符合平台要求，请修改后重新提交。' },
+  { id: 7, name: '内容与分类不符', content: '您提交的内容与所选分类不符，请选择正确分类后重新提交。' },
+  { id: 8, name: '其他原因', content: '' }
+]
+
 // 查询表单
-const queryForm = reactive<AuditContentQueryDTO>({
+const queryForm = reactive<AuditContentQueryDTO & { riskLevel?: string; contentType?: number }>({
   priority: undefined,
   categoryId: undefined,
+  riskLevel: undefined,
+  contentType: undefined,
   dateRange: []
 })
 
@@ -265,12 +329,17 @@ const previewData = ref<any>({})
 const auditDialogVisible = ref(false)
 const auditDialogTitle = ref('')
 const auditFormRef = ref<FormInstance>()
+const selectedRejectTemplate = ref<number | null>(null)
 const auditForm = reactive({
   contentId: 0,
   auditStatus: 1,
   auditComment: ''
 })
-const auditRules: FormRules = {}
+const auditRules: FormRules = {
+  auditComment: [
+    { required: false, message: '请输入审核意见', trigger: 'blur' }
+  ]
+}
 
 // 提交loading
 const submitLoading = ref(false)
@@ -305,6 +374,8 @@ async function handleQuery() {
 function handleReset() {
   queryForm.priority = undefined
   queryForm.categoryId = undefined
+  queryForm.riskLevel = undefined
+  queryForm.contentType = undefined
   queryForm.dateRange = []
   pagination.current = 1
   handleQuery()
@@ -327,6 +398,7 @@ function handleApprove(row: AuditContent) {
   auditForm.contentId = row.id
   auditForm.auditStatus = 1
   auditForm.auditComment = ''
+  selectedRejectTemplate.value = null
   auditDialogVisible.value = true
 }
 
@@ -342,6 +414,7 @@ function handleReject(row: AuditContent) {
   auditForm.contentId = row.id
   auditForm.auditStatus = 2
   auditForm.auditComment = ''
+  selectedRejectTemplate.value = null
   auditDialogVisible.value = true
 }
 
@@ -351,9 +424,23 @@ function handleRejectFromPreview() {
   handleReject(previewData.value)
 }
 
+// 选择拒绝原因模板
+function handleTemplateSelect(templateId: number) {
+  const template = rejectTemplates.find(t => t.id === templateId)
+  if (template) {
+    auditForm.auditComment = template.content
+  }
+}
+
 // 提交审核
 async function handleAuditSubmit() {
   if (!auditFormRef.value) return
+
+  // 拒绝时必须填写原因
+  if (auditForm.auditStatus === 2 && !auditForm.auditComment.trim()) {
+    ElMessage.warning('请填写拒绝原因')
+    return
+  }
 
   submitLoading.value = true
   try {
@@ -406,14 +493,18 @@ function handleBatchReject() {
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      inputPlaceholder: '请输入拒绝原因（选填）',
+      inputPlaceholder: '请输入拒绝原因',
       inputType: 'textarea'
     }
   ).then(async ({ value }) => {
+    if (!value?.trim()) {
+      ElMessage.warning('请输入拒绝原因')
+      return
+    }
     try {
       await batchRejectContent({
         contentIds: selectedIds.value,
-        auditComment: value || ''
+        auditComment: value
       })
       ElMessage.success('批量拒绝成功')
       handleQuery()
@@ -425,33 +516,39 @@ function handleBatchReject() {
 
 // 获取分类名称
 function getCategoryName(categoryId: number): string {
-  const map: Record<number, string> = {
-    1: '爱好娱乐',
-    2: '情感约会',
-    3: '生活日常',
-    4: '学习工作'
-  }
+  const map: Record<number, string> = { 1: '爱好娱乐', 2: '情感约会', 3: '生活日常', 4: '学习工作' }
   return map[categoryId] || ''
 }
 
 // 获取优先级类型
 function getPriorityType(priority: number): string {
-  const map: Record<number, string> = {
-    3: 'danger',
-    2: 'warning',
-    1: 'info'
-  }
+  const map: Record<number, string> = { 3: 'danger', 2: 'warning', 1: 'info' }
   return map[priority] || ''
 }
 
 // 获取优先级文本
 function getPriorityText(priority: number): string {
-  const map: Record<number, string> = {
-    3: '高',
-    2: '中',
-    1: '低'
-  }
+  const map: Record<number, string> = { 3: '高', 2: '中', 1: '低' }
   return map[priority] || ''
+}
+
+// 获取AI结果类型
+function getAiResultType(result: number): string {
+  const map: Record<number, string> = { 1: 'success', 2: 'warning', 3: 'danger' }
+  return map[result] || ''
+}
+
+// 获取AI结果文本
+function getAiResultText(result: number): string {
+  const map: Record<number, string> = { 1: '建议通过', 2: '需复审', 3: '建议拒绝' }
+  return map[result] || '-'
+}
+
+// 获取风险分样式类
+function getRiskScoreClass(score: number): string {
+  if (score >= 80) return 'risk-high'
+  if (score >= 30) return 'risk-medium'
+  return 'risk-low'
 }
 
 // 获取等待时长
@@ -461,13 +558,17 @@ function getWaitingTime(submitTime: string): string {
   const hours = now.diff(submit, 'hour')
   const minutes = now.diff(submit, 'minute')
 
-  if (hours >= 24) {
-    return `${Math.floor(hours / 24)}天`
-  } else if (hours > 0) {
-    return `${hours}小时`
-  } else {
-    return `${minutes}分钟`
-  }
+  if (hours >= 24) return `${Math.floor(hours / 24)}天`
+  if (hours > 0) return `${hours}小时`
+  return `${minutes}分钟`
+}
+
+// 获取等待时长样式类
+function getWaitingTimeClass(submitTime: string): string {
+  const hours = dayjs().diff(dayjs(submitTime), 'hour')
+  if (hours >= 24) return 'waiting-danger'
+  if (hours >= 4) return 'waiting-warning'
+  return ''
 }
 
 onMounted(() => {
@@ -479,10 +580,7 @@ onMounted(() => {
 .audit-queue-page {
   .search-card {
     margin-bottom: 16px;
-
-    .batch-actions {
-      margin-top: 12px;
-    }
+    .batch-actions { margin-top: 12px; }
   }
 
   .table-card {
@@ -491,6 +589,26 @@ onMounted(() => {
       display: flex;
       justify-content: flex-end;
     }
+  }
+
+  .ai-result {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .risk-score {
+      font-size: 12px;
+      &.risk-high { color: #f56c6c; }
+      &.risk-medium { color: #e6a23c; }
+      &.risk-low { color: #67c23a; }
+    }
+  }
+
+  .waiting-danger { color: #f56c6c; font-weight: 500; }
+  .waiting-warning { color: #e6a23c; }
+
+  .ai-detail-card, .sensitive-card {
+    margin-top: 16px;
   }
 }
 </style>

@@ -84,6 +84,14 @@ public interface ContentService {
     List<WheelContent> searchContents(String keyword, Long categoryId, Integer pageNum, Integer pageSize);
 
     /**
+     * 根据ID获取内容
+     *
+     * @param contentId 内容ID
+     * @return 内容实体
+     */
+    WheelContent getContentById(Long contentId);
+
+    /**
      * 提交结果
      */
     class SubmitResult {

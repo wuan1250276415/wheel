@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.UserReportCredibilityMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.UserReportCredibility">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="user_id" jdbcType="BIGINT" property="userId"/>
+        <result column="credibility_score" jdbcType="INTEGER" property="credibilityScore"/>
+        <result column="total_reports" jdbcType="INTEGER" property="totalReports"/>
+        <result column="valid_reports" jdbcType="INTEGER" property="validReports"/>
+        <result column="invalid_reports" jdbcType="INTEGER" property="invalidReports"/>
+        <result column="last_report_at" jdbcType="TIMESTAMP" property="lastReportAt"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, credibility_score, total_reports, valid_reports, invalid_reports, 
+        last_report_at, create_time, create_by, update_time, update_by, deleted
+    </sql>
+
+    <!-- 根据用户ID查询信誉记录 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_report_credibility
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND deleted = 1
+    </select>
+
+    <!-- 查询低信誉用户列表 -->
+    <select id="selectLowCredibilityUsers" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_report_credibility
+        WHERE credibility_score &lt; #{threshold,jdbcType=INTEGER}
+        AND deleted = 1
+        ORDER BY credibility_score ASC
+    </select>
+
+    <!-- 增加有效举报计数并调整信誉分 -->
+    <update id="incrementValidReport">
+        UPDATE user_report_credibility
+        SET total_reports = total_reports + 1,
+            valid_reports = valid_reports + 1,
+            credibility_score = LEAST(100, credibility_score + #{increment,jdbcType=INTEGER}),
+            last_report_at = NOW(),
+            update_time = NOW()
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND deleted = 1
+    </update>
+
+    <!-- 增加无效举报计数并调整信誉分 -->
+    <update id="incrementInvalidReport">
+        UPDATE user_report_credibility
+        SET total_reports = total_reports + 1,
+            invalid_reports = invalid_reports + 1,
+            credibility_score = GREATEST(0, credibility_score - #{decrement,jdbcType=INTEGER}),
+            last_report_at = NOW(),
+            update_time = NOW()
+        WHERE user_id = #{userId,jdbcType=BIGINT}
+        AND deleted = 1
+    </update>
+
+    <!-- 初始化用户信誉记录 -->
+    <insert id="initUserCredibility">
+        INSERT INTO user_report_credibility (user_id, credibility_score, total_reports, valid_reports, invalid_reports, create_time)
+        VALUES (#{userId,jdbcType=BIGINT}, 100, 0, 0, 0, NOW())
+        ON DUPLICATE KEY UPDATE update_time = NOW()
+    </insert>
+
+    <!-- 统计各信誉等级用户数量 -->
+    <select id="countByCredibilityLevel" resultType="java.util.Map">
+        SELECT
+            CASE
+                WHEN credibility_score >= 80 THEN 'high'
+                WHEN credibility_score >= 50 THEN 'medium'
+                WHEN credibility_score >= 30 THEN 'low'
+                ELSE 'very_low'
+            END AS level,
+            COUNT(*) AS count
+        FROM user_report_credibility
+        WHERE deleted = 1
+        GROUP BY level
+        ORDER BY 
+            CASE level
+                WHEN 'high' THEN 1
+                WHEN 'medium' THEN 2
+                WHEN 'low' THEN 3
+                ELSE 4
+            END
+    </select>
+
+    <!-- 查询举报活跃用户（按举报数排序） -->
+    <select id="selectActiveReporters" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM user_report_credibility
+        WHERE total_reports > 0
+        AND deleted = 1
+        ORDER BY total_reports DESC, valid_reports DESC
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+</mapper>

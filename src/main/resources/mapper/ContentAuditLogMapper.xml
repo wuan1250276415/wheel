@@ -119,4 +119,69 @@
         </if>
         ORDER BY audited_at DESC
     </select>
+
+    <!-- 统计今日审核数据 -->
+    <select id="selectTodayAuditLogs" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM content_audit_log
+        WHERE DATE(audited_at) = CURDATE()
+        ORDER BY audited_at DESC
+    </select>
+
+    <!-- 统计违规类型分布 -->
+    <select id="selectViolationDistribution" resultType="java.util.Map">
+        SELECT
+            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ai_audit_result, '$.riskType')), 'unknown') as violationType,
+            COUNT(*) as count
+        FROM content_audit_log
+        WHERE audit_status = 2
+        <if test="startTime != null">
+            AND audited_at >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND audited_at &lt;= #{endTime}
+        </if>
+        GROUP BY violationType
+        ORDER BY count DESC
+    </select>
+
+    <!-- 统计每日审核数量 -->
+    <select id="selectDailyAuditCount" resultType="java.util.Map">
+        SELECT
+            DATE_FORMAT(audited_at, '%Y-%m-%d') as auditDate,
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN audit_status = 1 THEN 1 ELSE 0 END) as approvedCount,
+            SUM(CASE WHEN audit_status = 2 THEN 1 ELSE 0 END) as rejectedCount
+        FROM content_audit_log
+        WHERE 1=1
+        <if test="startTime != null">
+            AND audited_at >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND audited_at &lt;= #{endTime}
+        </if>
+        GROUP BY DATE_FORMAT(audited_at, '%Y-%m-%d')
+        ORDER BY auditDate DESC
+    </select>
+
+    <!-- 统计审核员工作量汇总 -->
+    <select id="selectAuditorWorkloadSummary" resultType="java.util.Map">
+        SELECT
+            auditor_id as auditorId,
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN audit_status = 1 THEN 1 ELSE 0 END) as approvedCount,
+            SUM(CASE WHEN audit_status = 2 THEN 1 ELSE 0 END) as rejectedCount,
+            AVG(process_time) as avgProcessTime
+        FROM content_audit_log
+        WHERE auditor_id IS NOT NULL
+        <if test="startTime != null">
+            AND audited_at >= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND audited_at &lt;= #{endTime}
+        </if>
+        GROUP BY auditor_id
+        ORDER BY totalCount DESC
+    </select>
 </mapper>

@@ -128,6 +128,15 @@
         "navigationBarTextStyle": "white",
         "backgroundColor": "#FFF0F5"
       }
+    },
+    {
+      "path": "pages/blocked/blocked",
+      "style": {
+        "navigationBarTitleText": "账号受限",
+        "navigationBarBackgroundColor": "#DC143C",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#FFE4E1"
+      }
     }
   ],
   "tabBar": {

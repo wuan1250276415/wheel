@@ -62,6 +62,43 @@ const routes: RouteRecordRaw[] = [
             name: 'AuditHistory',
             component: () => import('@/views/audit/history.vue'),
             meta: { title: '审核历史', permission: 'audit:history:view' }
+          },
+          {
+            path: 'statistics',
+            name: 'AuditStatistics',
+            component: () => import('@/views/audit/statistics.vue'),
+            meta: { title: '审核统计', permission: 'audit:statistics:view' }
+          }
+        ]
+      },
+      {
+        path: 'security',
+        name: 'Security',
+        meta: { title: '内容安全', icon: 'Shield' },
+        children: [
+          {
+            path: 'sensitive-word',
+            name: 'SensitiveWord',
+            component: () => import('@/views/security/sensitive-word.vue'),
+            meta: { title: '敏感词管理', permission: 'security:sensitive:view' }
+          },
+          {
+            path: 'blacklist',
+            name: 'Blacklist',
+            component: () => import('@/views/security/blacklist.vue'),
+            meta: { title: '黑名单管理', permission: 'security:blacklist:view' }
+          },
+          {
+            path: 'report',
+            name: 'Report',
+            component: () => import('@/views/security/report.vue'),
+            meta: { title: '举报管理', permission: 'security:report:view' }
+          },
+          {
+            path: 'config',
+            name: 'AuditConfig',
+            component: () => import('@/views/security/config.vue'),
+            meta: { title: '审核配置', permission: 'security:config:view' }
           }
         ]
       }

@@ -307,6 +307,14 @@ public class ContentServiceImpl implements ContentService {
         return page.getRecords();
     }
 
+    @Override
+    public WheelContent getContentById(Long contentId) {
+        if (contentId == null) {
+            return null;
+        }
+        return contentMapper.selectById(contentId);
+    }
+
     /**
      * 将标签列表转换为JSON字符串
      */

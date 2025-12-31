@@ -104,4 +104,55 @@ public interface WheelContentMapper extends BaseMapper<WheelContent> {
             @Param("difficultyLevel") Integer difficultyLevel,
             @Param("featureVector") String featureVector
     );
+
+    /**
+     * 带筛选条件的审核队列查询
+     *
+     * @param categoryId 分类ID
+     * @param auditPriority 审核优先级
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param submitUserId 提交用户ID
+     * @param keyword 关键词
+     * @param offset 偏移量
+     * @param limit 限制数量
+     * @return 待审核内容列表
+     */
+    List<WheelContent> selectAuditQueueWithFilter(
+            @Param("categoryId") Long categoryId,
+            @Param("auditPriority") Integer auditPriority,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime,
+            @Param("submitUserId") Long submitUserId,
+            @Param("keyword") String keyword,
+            @Param("offset") Integer offset,
+            @Param("limit") Integer limit
+    );
+
+    /**
+     * 统计带筛选条件的审核队列数量
+     *
+     * @param categoryId 分类ID
+     * @param auditPriority 审核优先级
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param submitUserId 提交用户ID
+     * @param keyword 关键词
+     * @return 数量
+     */
+    Integer countAuditQueueWithFilter(
+            @Param("categoryId") Long categoryId,
+            @Param("auditPriority") Integer auditPriority,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime,
+            @Param("submitUserId") Long submitUserId,
+            @Param("keyword") String keyword
+    );
+
+    /**
+     * 统计待审核内容总数
+     *
+     * @return 待审核数量
+     */
+    Integer countPendingAudit();
 }

@@ -72,6 +72,14 @@
         <view class="card-footer">
           <text class="time-text">{{ formatTime(item.createdAt) }}</text>
           <view class="action-btns">
+            <!-- 已拒绝的内容可以申诉 -->
+            <button
+              v-if="item.status === 2"
+              class="action-btn appeal-btn"
+              @click="openAppealDialog(item)"
+            >
+              申诉
+            </button>
             <!-- 只有待审核和已拒绝的内容可以编辑 -->
             <button
               v-if="item.status !== 1"
@@ -223,6 +231,14 @@
         </view>
       </view>
     </view>
+
+    <!-- 内容申诉弹窗 -->
+    <ContentAppealDialog
+      :visible="showAppealDialog"
+      :content-id="appealContentId"
+      @close="showAppealDialog = false"
+      @success="onAppealSuccess"
+    />
   </view>
 </template>
 
@@ -233,6 +249,7 @@ import { useWheelStore } from '@/stores/wheel'
 import type { WheelContent, ContentSubmitDTO } from '@/api/content'
 import { membershipAPI } from '@/api/membership'
 import type { MembershipStatusVO } from '@/types/api'
+import ContentAppealDialog from '@/components/ContentAppealDialog.vue'
 
 const contentStore = useContentStore()
 const wheelStore = useWheelStore()
@@ -240,6 +257,8 @@ const wheelStore = useWheelStore()
 // 状态
 const activeTab = ref<'all' | 'pending' | 'approved' | 'rejected'>('all')
 const isRefreshing = ref(false)
+const showAppealDialog = ref(false)
+const appealContentId = ref<number | string>(0)
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref<number | null>(null)
@@ -515,6 +534,19 @@ async function doDelete() {
 
   cancelDelete()
 }
+
+// 打开申诉弹窗
+function openAppealDialog(item: WheelContent) {
+  appealContentId.value = item.id
+  showAppealDialog.value = true
+}
+
+// 申诉成功回调
+function onAppealSuccess() {
+  uni.showToast({ title: '申诉已提交', icon: 'success' })
+  // 刷新内容列表
+  contentStore.refresh()
+}
 </script>
 
 
@@ -690,6 +722,11 @@ async function doDelete() {
 .delete-btn {
   background: #FFEBEE;
   color: #DC143C;
+}
+
+.appeal-btn {
+  background: #E8F5E9;
+  color: #4CAF50;
 }
 
 /* 加载更多 */
