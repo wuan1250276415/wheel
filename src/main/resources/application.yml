@@ -48,6 +48,35 @@ wheel:
       endpoint: ${TENCENT_TMS_ENDPOINT:tms.tencentcloudapi.com}
       image-endpoint: ${TENCENT_IMS_ENDPOINT:ims.tencentcloudapi.com}
 
+  # 数据库备份配置
+  backup:
+    enabled: ${BACKUP_ENABLED:true}
+    daily-cron: ${BACKUP_DAILY_CRON:0 0 2 * * ?}
+    weekly-cron: ${BACKUP_WEEKLY_CRON:0 0 3 ? * SUN}
+    cleanup-cron: ${BACKUP_CLEANUP_CRON:0 0 4 * * ?}
+    health-check-cron: ${BACKUP_HEALTH_CHECK_CRON:0 0 * * * ?}
+    retention-days: ${BACKUP_RETENTION_DAYS:30}
+    min-backup-count: ${BACKUP_MIN_COUNT:7}
+    storage-path: ${BACKUP_STORAGE_PATH:/data/backups}
+    encryption-enabled: ${BACKUP_ENCRYPTION_ENABLED:true}
+    encryption-key: ${BACKUP_ENCRYPTION_KEY:}
+    alert-threshold-hours: ${BACKUP_ALERT_THRESHOLD_HOURS:48}
+    storage-warning-threshold-gb: ${BACKUP_STORAGE_WARNING_GB:50}
+    mysql:
+      mysqldump-path: ${MYSQLDUMP_PATH:mysqldump}
+      mysql-path: ${MYSQL_PATH:mysql}
+      host: ${MYSQL_HOST:localhost}
+      port: ${MYSQL_PORT:3306}
+      database: ${MYSQL_DATABASE:wheel}
+      username: ${MYSQL_USERNAME:root}
+      password: ${MYSQL_PASSWORD:}
+      extra-args: ${MYSQLDUMP_EXTRA_ARGS:--single-transaction --quick --lock-tables=false}
+    retry:
+      max-retries: ${BACKUP_MAX_RETRIES:3}
+      initial-delay-ms: ${BACKUP_INITIAL_DELAY_MS:1000}
+      multiplier: ${BACKUP_RETRY_MULTIPLIER:2.0}
+      max-delay-ms: ${BACKUP_MAX_DELAY_MS:30000}
+
 push:
   jpush:
     enabled: ${JPUSH_ENABLED:false}

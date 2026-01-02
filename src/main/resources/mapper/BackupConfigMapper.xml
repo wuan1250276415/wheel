@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.BackupConfigMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.BackupConfig">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="config_key" jdbcType="VARCHAR" property="configKey"/>
+        <result column="config_value" jdbcType="VARCHAR" property="configValue"/>
+        <result column="description" jdbcType="VARCHAR" property="description"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, config_key, config_value, description, create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <!-- 根据配置键查询配置 -->
+    <select id="selectByKey" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_config
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+        AND deleted = 1
+    </select>
+
+    <!-- 查询所有配置 -->
+    <select id="selectAllConfigs" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_config
+        WHERE deleted = 1
+        ORDER BY config_key ASC
+    </select>
+
+    <!-- 更新配置值 -->
+    <update id="updateValueByKey">
+        UPDATE backup_config
+        SET config_value = #{configValue,jdbcType=VARCHAR},
+            update_time = NOW()
+            <if test="updateBy != null">
+                , update_by = #{updateBy,jdbcType=BIGINT}
+            </if>
+        WHERE config_key = #{configKey,jdbcType=VARCHAR}
+        AND deleted = 1
+    </update>
+
+    <!-- 批量查询配置 -->
+    <select id="selectByKeys" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_config
+        WHERE config_key IN
+        <foreach collection="configKeys" item="key" open="(" separator="," close=")">
+            #{key,jdbcType=VARCHAR}
+        </foreach>
+        AND deleted = 1
+    </select>
+
+    <!-- 插入或更新配置 -->
+    <insert id="insertOrUpdate" parameterType="com.basebackend.wheel.entity.BackupConfig">
+        INSERT INTO backup_config (config_key, config_value, description, create_time, create_by)
+        VALUES (#{configKey,jdbcType=VARCHAR}, 
+                #{configValue,jdbcType=VARCHAR}, 
+                #{description,jdbcType=VARCHAR}, 
+                NOW(), 
+                #{createBy,jdbcType=BIGINT})
+        ON DUPLICATE KEY UPDATE 
+            config_value = #{configValue,jdbcType=VARCHAR},
+            description = #{description,jdbcType=VARCHAR},
+            update_time = NOW(),
+            update_by = #{updateBy,jdbcType=BIGINT}
+    </insert>
+
+    <!-- 批量更新配置 -->
+    <update id="batchUpdate">
+        <foreach collection="configs" item="config" separator=";">
+            UPDATE backup_config
+            SET config_value = #{config.configValue,jdbcType=VARCHAR},
+                update_time = NOW(),
+                update_by = #{config.updateBy,jdbcType=BIGINT}
+            WHERE config_key = #{config.configKey,jdbcType=VARCHAR}
+            AND deleted = 1
+        </foreach>
+    </update>
+</mapper>

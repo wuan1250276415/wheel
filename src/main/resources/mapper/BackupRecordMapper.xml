@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.BackupRecordMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.BackupRecord">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="backup_type" jdbcType="TINYINT" property="backupType"/>
+        <result column="filename" jdbcType="VARCHAR" property="filename"/>
+        <result column="file_path" jdbcType="VARCHAR" property="filePath"/>
+        <result column="file_size" jdbcType="BIGINT" property="fileSize"/>
+        <result column="is_encrypted" jdbcType="TINYINT" property="isEncrypted"/>
+        <result column="status" jdbcType="TINYINT" property="status"/>
+        <result column="description" jdbcType="VARCHAR" property="description"/>
+        <result column="duration_ms" jdbcType="BIGINT" property="durationMs"/>
+        <result column="error_message" jdbcType="LONGVARCHAR" property="errorMessage"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, backup_type, filename, file_path, file_size, is_encrypted, status, 
+        description, duration_ms, error_message, create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <!-- 分页查询备份记录 -->
+    <select id="selectBackupPage" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_record
+        WHERE deleted = 1
+        <if test="backupType != null">
+            AND backup_type = #{backupType,jdbcType=TINYINT}
+        </if>
+        <if test="status != null">
+            AND status = #{status,jdbcType=TINYINT}
+        </if>
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询最近一次成功的备份 -->
+    <select id="selectLastSuccessBackup" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_record
+        WHERE deleted = 1 AND status = 1
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 查询指定时间之前的备份记录 -->
+    <select id="selectBackupsBeforeTime" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_record
+        WHERE deleted = 1 AND create_time &lt; #{beforeTime,jdbcType=TIMESTAMP}
+        ORDER BY create_time ASC
+    </select>
+
+    <!-- 统计成功备份数量 -->
+    <select id="countSuccessBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 AND status = 1
+    </select>
+
+    <!-- 统计失败备份数量 -->
+    <select id="countFailedBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 AND status = 2
+    </select>
+
+    <!-- 统计总备份数量 -->
+    <select id="countTotalBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1
+    </select>
+
+    <!-- 计算总存储使用量 -->
+    <select id="sumTotalStorageUsed" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(file_size), 0)
+        FROM backup_record
+        WHERE deleted = 1 AND status = 1
+    </select>
+
+    <!-- 查询备份统计信息 -->
+    <select id="selectBackupStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as successCount,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as failedCount,
+            COALESCE(SUM(CASE WHEN status = 1 THEN file_size ELSE 0 END), 0) as totalStorageUsed,
+            MAX(CASE WHEN status = 1 THEN create_time ELSE NULL END) as lastSuccessTime,
+            MAX(CASE WHEN status = 1 THEN file_size ELSE NULL END) as lastBackupSize
+        FROM backup_record
+        WHERE deleted = 1
+    </select>
+
+    <!-- 查询指定数量的最新备份 -->
+    <select id="selectLatestBackups" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_record
+        WHERE deleted = 1
+        ORDER BY create_time DESC
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+
+    <!-- 查询进行中的备份 -->
+    <select id="selectInProgressBackup" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM backup_record
+        WHERE deleted = 1 AND status = 0
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 更新备份状态 -->
+    <update id="updateBackupStatus">
+        UPDATE backup_record
+        SET status = #{status,jdbcType=TINYINT},
+            update_time = NOW()
+            <if test="fileSize != null">
+                , file_size = #{fileSize,jdbcType=BIGINT}
+            </if>
+            <if test="durationMs != null">
+                , duration_ms = #{durationMs,jdbcType=BIGINT}
+            </if>
+            <if test="errorMessage != null">
+                , error_message = #{errorMessage,jdbcType=LONGVARCHAR}
+            </if>
+        WHERE id = #{id,jdbcType=BIGINT} AND deleted = 1
+    </update>
+
+    <!-- 批量删除备份记录（逻辑删除） -->
+    <update id="batchDeleteByIds">
+        UPDATE backup_record
+        SET deleted = 0, update_time = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id,jdbcType=BIGINT}
+        </foreach>
+        AND deleted = 1
+    </update>
+
+    <!-- 统计今日备份数量 -->
+    <select id="countTodayBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 
+        AND DATE(create_time) = CURDATE()
+    </select>
+
+    <!-- 统计本周备份数量 -->
+    <select id="countWeekBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 
+        AND YEARWEEK(create_time, 1) = YEARWEEK(CURDATE(), 1)
+    </select>
+
+    <!-- 统计本月备份数量 -->
+    <select id="countMonthBackups" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 
+        AND YEAR(create_time) = YEAR(CURDATE())
+        AND MONTH(create_time) = MONTH(CURDATE())
+    </select>
+
+    <!-- 统计指定时间范围内的成功备份数量 -->
+    <select id="countSuccessBackupsInRange" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 AND status = 1
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+        </if>
+    </select>
+
+    <!-- 统计指定时间范围内的失败备份数量 -->
+    <select id="countFailedBackupsInRange" resultType="int">
+        SELECT COUNT(*)
+        FROM backup_record
+        WHERE deleted = 1 AND status = 2
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+        </if>
+    </select>
+</mapper>

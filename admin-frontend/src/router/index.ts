@@ -101,6 +101,37 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '审核配置', permission: 'security:config:view' }
           }
         ]
+      },
+      {
+        path: 'backup',
+        name: 'Backup',
+        meta: { title: '备份管理', icon: 'Files' },
+        children: [
+          {
+            path: 'list',
+            name: 'BackupList',
+            component: () => import('@/views/backup/list.vue'),
+            meta: { title: '备份列表', permission: 'backup:list:view' }
+          },
+          {
+            path: 'restore',
+            name: 'BackupRestore',
+            component: () => import('@/views/backup/restore.vue'),
+            meta: { title: '恢复管理', permission: 'backup:restore' }
+          },
+          {
+            path: 'config',
+            name: 'BackupConfig',
+            component: () => import('@/views/backup/config.vue'),
+            meta: { title: '备份配置', permission: 'backup:config:view' }
+          },
+          {
+            path: 'statistics',
+            name: 'BackupStatistics',
+            component: () => import('@/views/backup/statistics.vue'),
+            meta: { title: '备份统计', permission: 'backup:statistics:view' }
+          }
+        ]
       }
     ]
   }

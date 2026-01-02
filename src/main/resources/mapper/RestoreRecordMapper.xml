@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.basebackend.wheel.mapper.RestoreRecordMapper">
+    <resultMap id="BaseResultMap" type="com.basebackend.wheel.entity.RestoreRecord">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="backup_id" jdbcType="BIGINT" property="backupId"/>
+        <result column="pre_restore_backup_id" jdbcType="BIGINT" property="preRestoreBackupId"/>
+        <result column="source_type" jdbcType="TINYINT" property="sourceType"/>
+        <result column="source_filename" jdbcType="VARCHAR" property="sourceFilename"/>
+        <result column="status" jdbcType="TINYINT" property="status"/>
+        <result column="duration_ms" jdbcType="BIGINT" property="durationMs"/>
+        <result column="error_message" jdbcType="LONGVARCHAR" property="errorMessage"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="create_by" jdbcType="BIGINT" property="createBy"/>
+        <result column="update_by" jdbcType="BIGINT" property="updateBy"/>
+        <result column="deleted" jdbcType="TINYINT" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, backup_id, pre_restore_backup_id, source_type, source_filename, status, 
+        duration_ms, error_message, create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <!-- 分页查询恢复记录 -->
+    <select id="selectRestorePage" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM restore_record
+        WHERE deleted = 1
+        <if test="sourceType != null">
+            AND source_type = #{sourceType,jdbcType=TINYINT}
+        </if>
+        <if test="status != null">
+            AND status = #{status,jdbcType=TINYINT}
+        </if>
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据备份ID查询恢复记录 -->
+    <select id="selectByBackupId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM restore_record
+        WHERE deleted = 1 AND backup_id = #{backupId,jdbcType=BIGINT}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询进行中的恢复 -->
+    <select id="selectInProgressRestore" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM restore_record
+        WHERE deleted = 1 AND status = 0
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 查询最近一次恢复记录 -->
+    <select id="selectLastRestore" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM restore_record
+        WHERE deleted = 1
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 更新恢复状态 -->
+    <update id="updateRestoreStatus">
+        UPDATE restore_record
+        SET status = #{status,jdbcType=TINYINT},
+            update_time = NOW()
+            <if test="durationMs != null">
+                , duration_ms = #{durationMs,jdbcType=BIGINT}
+            </if>
+            <if test="errorMessage != null">
+                , error_message = #{errorMessage,jdbcType=LONGVARCHAR}
+            </if>
+        WHERE id = #{id,jdbcType=BIGINT} AND deleted = 1
+    </update>
+
+    <!-- 更新恢复前备份ID -->
+    <update id="updatePreRestoreBackupId">
+        UPDATE restore_record
+        SET pre_restore_backup_id = #{preRestoreBackupId,jdbcType=BIGINT},
+            update_time = NOW()
+        WHERE id = #{id,jdbcType=BIGINT} AND deleted = 1
+    </update>
+
+    <!-- 统计恢复记录数量 -->
+    <select id="countTotalRestores" resultType="int">
+        SELECT COUNT(*)
+        FROM restore_record
+        WHERE deleted = 1
+    </select>
+
+    <!-- 统计成功恢复数量 -->
+    <select id="countSuccessRestores" resultType="int">
+        SELECT COUNT(*)
+        FROM restore_record
+        WHERE deleted = 1 AND status = 1
+    </select>
+
+    <!-- 查询指定数量的最新恢复记录 -->
+    <select id="selectLatestRestores" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM restore_record
+        WHERE deleted = 1
+        ORDER BY create_time DESC
+        LIMIT #{limit,jdbcType=INTEGER}
+    </select>
+</mapper>
